@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StrangerChat — Talk to the World</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #111118;
+      --card:      #16161f;
+      --border:    #2a2a3a;
+      --accent:    #6c63ff;
+      --accent2:   #a78bfa;
+      --green:     #22d3a5;
+      --red:       #ff5c7a;
+      --text:      #f0f0f8;
+      --muted:     #7878a0;
+      --me-bubble: #6c63ff;
+      --them-bubble:#1e1e2e;
+      --radius:    14px;
+      --font-head: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      font-family: var(--font-head);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent2); }
+    .stats {
+      display: flex;
+      gap: 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .stats .dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; } 50% { opacity:.4; }
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      text-align: center;
+      padding: 8px 0 4px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex-shrink: 0;
+      min-height: 28px;
+    }
+    .status-bar.connected { color: var(--green); }
+    .status-bar.waiting   { color: var(--accent2); }
+    .status-bar.error     { color: var(--red); }
+
+    /* ── CHAT BOX ── */
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scroll-behavior: smooth;
+    }
+    #chat-box::-webkit-scrollbar { width: 4px; }
+    #chat-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── LANDING SCREEN ── */
+    #landing {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 20px;
+      padding: 20px;
+    }
+    #landing h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1px;
+    }
+    #landing h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #landing p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 380px;
+      line-height: 1.6;
+    }
+    .globe {
+      font-size: 3.5rem;
+      animation: spin 8s linear infinite;
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .rules {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 22px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: left;
+      max-width: 380px;
+      width: 100%;
+      line-height: 1.8;
+    }
+    .rules b { color: var(--text); }
+
+    /* ── MESSAGES ── */
+    .msg {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      word-break: break-word;
+      animation: fadeUp 0.18s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(6px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    .msg.me {
+      background: var(--me-bubble);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      color: #fff;
+    }
+    .msg.them {
+      background: var(--them-bubble);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .msg.system {
+      background: transparent;
+      align-self: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 4px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 20px;
+      max-width: 90%;
+      text-align: center;
+    }
+    .msg-time {
+      font-size: 0.66rem;
+      color: rgba(255,255,255,0.35);
+      margin-top: 3px;
+      text-align: right;
+    }
+    .msg.them .msg-time { text-align: left; color: var(--muted); opacity: .6; }
+
+    /* ── TYPING ── */
+    #typing-indicator {
+      display: none;
+      align-self: flex-start;
+      padding: 10px 14px;
+      background: var(--them-bubble);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      gap: 4px;
+    }
+    #typing-indicator.show { display: flex; }
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    /* ── INPUT AREA ── */
+    .input-area {
+      padding: 12px 0 16px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    #msg-input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 16px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      outline: none;
+      resize: none;
+      min-height: 46px;
+      max-height: 120px;
+      transition: border-color .15s;
+    }
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+    #msg-input:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0 20px;
+      height: 46px;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn-send {
+      background: var(--accent);
+      color: #fff;
+      min-width: 46px;
+      padding: 0 14px;
+    }
+    .btn-send:hover { background: var(--accent2); }
+    .btn-send:disabled { opacity: .4; cursor: not-allowed; }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      flex: 1;
+      font-size: 1rem;
+      height: 52px;
+      border-radius: 14px;
+    }
+    .btn-start:hover { opacity: .9; }
+    .btn-next {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-next:hover { border-color: var(--accent); color: var(--accent2); }
+    .btn-stop {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--red);
+    }
+    .btn-stop:hover { background: rgba(255,92,122,.08); border-color: var(--red); }
+
+    /* ── STATES ── */
+    .hidden { display: none !important; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 500px) {
+      .app { padding: 0 10px; }
+      .logo { font-size: 1.1rem; }
+      .stats { gap: 10px; font-size: 0.72rem; }
+      #landing h1 { font-size: 1.8rem; }
+      .btn { font-size: 0.82rem; padding: 0 12px; }
+    }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Stranger<span>Chat</span></div>
+    <div class="stats">
+      <span><span class="dot"></span><span id="stat-online">0</span> online</span>
+      <span id="stat-waiting">0 waiting</span>
+    </div>
+  </header>
+
+  <!-- STATUS -->
+  <div class="status-bar" id="status-bar">Connecting…</div>
+
+  <!-- LANDING -->
+  <div id="landing">
+    <div class="globe">🌍</div>
+    <h1>Chat with the<br/><em>whole world</em></h1>
+    <p>One click. A random stranger. Anywhere on Earth. Text only — clean, simple, anonymous.</p>
+    <div class="rules">
+      <b>Community rules</b><br>
+      • Be respectful to strangers<br>
+      • No hate speech or harassment<br>
+      • No sharing of personal info<br>
+      • Users under 18 should leave
+    </div>
+    <button class="btn btn-start" id="btn-start-landing" onclick="startChat()">
+      Start Chatting →
+    </button>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat-section" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div id="chat-box">
+      <div id="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="controls">
+        <button class="btn btn-next" id="btn-next" onclick="nextStranger()">⏭ Next</button>
+        <button class="btn btn-stop" id="btn-stop" onclick="stopChat()">✕ Stop</button>
+      </div>
+      <div class="input-row">
+        <textarea id="msg-input" placeholder="Type a message…" rows="1" disabled
+          oninput="autoResize(this); onTyping();"
+          onkeydown="handleKey(event)"></textarea>
+        <button class="btn btn-send" id="btn-send" onclick="sendMessage()" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const socket = io();
+  let state = 'idle'; // idle | waiting | chatting
+  let typingTimeout = null;
+  let isTypingSent = false;
+
+  // ── DOM refs ──
+  const landing      = document.getElementById('landing');
+  const chatSection  = document.getElementById('chat-section');
+  const chatBox      = document.getElementById('chat-box');
+  const msgInput     = document.getElementById('msg-input');
+  const btnSend      = document.getElementById('btn-send');
+  const statusBar    = document.getElementById('status-bar');
+  const typingEl     = document.getElementById('typing-indicator');
+
+  // ── Socket events ──
+  socket.on('connect', () => setStatus('Connected — start a chat!', ''));
+  socket.on('disconnect', () => setStatus('Disconnected. Refresh the page.', 'error'));
+
+  socket.on('stats', ({ online, waiting }) => {
+    document.getElementById('stat-online').textContent = online;
+    document.getElementById('stat-waiting').textContent = `${waiting} waiting`;
+  });
+
+  socket.on('waiting', () => {
+    state = 'waiting';
+    setStatus('<span class="spinner"></span>Looking for a stranger…', 'waiting');
+    addMessage('Looking for someone to chat with…', 'system');
+  });
+
+  socket.on('matched', ({ message }) => {
+    state = 'chatting';
+    setStatus('● Connected to a stranger', 'connected');
+    addMessage(message, 'system');
+    enableInput(true);
+  });
+
+  socket.on('message', ({ text }) => {
+    hideTyping();
+    addMessage(text, 'them');
+  });
+
+  socket.on('typing', (isTyping) => {
+    isTyping ? showTyping() : hideTyping();
+  });
+
+  socket.on('strangerLeft', () => {
+    state = 'idle';
+    hideTyping();
+    enableInput(false);
+    setStatus('Stranger disconnected. Click Next for a new chat.', '');
+    addMessage('Stranger has disconnected.', 'system');
+  });
+
+  socket.on('idle', () => {
+    state = 'idle';
+    enableInput(false);
+    setStatus('Stopped. Click Start to find a new stranger.', '');
+  });
+
+  // ── Actions ──
+  function startChat() {
+    showChat();
+    socket.emit('findStranger');
+  }
+
+  function nextStranger() {
+    hideTyping();
+    enableInput(false);
+    clearChat();
+    socket.emit('disconnect_chat');
+    setTimeout(() => socket.emit('findStranger'), 100);
+  }
+
+  function stopChat() {
+    socket.emit('disconnect_chat');
+    hideTyping();
+    enableInput(false);
+    showLanding();
+  }
+
+  function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text || state !== 'chatting') return;
+    socket.emit('message', { text });
+    socket.emit('typing', false);
+    isTypingSent = false;
+    addMessage(text, 'me');
+    msgInput.value = '';
+    msgInput.style.height = '';
+    msgInput.focus();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function onTyping() {
+    if (state !== 'chatting') return;
+    if (!isTypingSent) {
+      socket.emit('typing', true);
+      isTypingSent = true;
+    }
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit('typing', false);
+      isTypingSent = false;
+    }, 1500);
+  }
+
+  // ── UI helpers ──
+  function addMessage(text, type) {
+    // Move typing indicator to end always
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    div.innerHTML = escapeHtml(text);
+    if (type !== 'system') {
+      const t = document.createElement('div');
+      t.className = 'msg-time';
+      t.textContent = now;
+      div.appendChild(t);
+    }
+    chatBox.insertBefore(div, typingEl);
+    scrollBottom();
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+               .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+  }
+
+  function clearChat() {
+    const msgs = chatBox.querySelectorAll('.msg');
+    msgs.forEach(m => m.remove());
+  }
+
+  function showTyping() {
+    typingEl.classList.add('show');
+    scrollBottom();
+  }
+  function hideTyping() { typingEl.classList.remove('show'); }
+
+  function scrollBottom() {
+    setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 30);
+  }
+
+  function setStatus(html, type) {
+    statusBar.innerHTML = html;
+    statusBar.className = 'status-bar' + (type ? ` ${type}` : '');
+  }
+
+  function enableInput(on) {
+    msgInput.disabled = !on;
+    btnSend.disabled = !on;
+    if (on) msgInput.focus();
+  }
+
+  function showChat() {
+    landing.classList.add('hidden');
+    chatSection.classList.remove('hidden');
+    chatSection.style.display = 'flex';
+  }
+
+  function showLanding() {
+    chatSection.classList.add('hidden');
+    landing.classList.remove('hidden');
+    clearChat();
+  }
+
+  function autoResize(el) {
+    el.style.height = '';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+</script>
+</body>
+</html>
