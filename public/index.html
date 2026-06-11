@@ -1,574 +1,547 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>StrangerChat — Talk to the World</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
     :root {
-      --bg:        #0a0a0f;
-      --surface:   #111118;
-      --card:      #16161f;
-      --border:    #2a2a3a;
-      --accent:    #6c63ff;
-      --accent2:   #a78bfa;
-      --green:     #22d3a5;
-      --red:       #ff5c7a;
-      --text:      #f0f0f8;
-      --muted:     #7878a0;
-      --me-bubble: #6c63ff;
-      --them-bubble:#1e1e2e;
-      --radius:    14px;
-      --font-head: 'Space Grotesk', sans-serif;
-      --font-body: 'Inter', sans-serif;
+      --bg:#0a0a0f;--surface:#111118;--card:#16161f;--border:#2a2a3a;
+      --accent:#6c63ff;--accent2:#a78bfa;--green:#22d3a5;--red:#ff5c7a;
+      --text:#f0f0f8;--muted:#7878a0;--me:#6c63ff;--them:#1e1e2e;
+      --radius:14px;--fh:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;
+    }
+    [data-theme="light"]{
+      --bg:#f4f4f8;--surface:#ffffff;--card:#ebebf5;--border:#d0d0e0;
+      --text:#111118;--muted:#666680;--them:#e8e8f0;
     }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      overflow: hidden;
-    }
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--fb);overflow:hidden;transition:background .2s,color .2s}
 
-    /* ── LAYOUT ── */
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 16px;
-    }
+    /* SCREENS */
+    .screen{display:none;flex-direction:column;height:100vh;max-width:860px;margin:0 auto;padding:0 16px}
+    .screen.active{display:flex}
 
-    /* ── HEADER ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 0 10px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .logo {
-      font-family: var(--font-head);
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .logo span { color: var(--accent2); }
-    .stats {
-      display: flex;
-      gap: 18px;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-    .stats .dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--green);
-      margin-right: 5px;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%,100% { opacity:1; } 50% { opacity:.4; }
-    }
+    /* HEADER */
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .logo{font-family:var(--fh);font-size:1.3rem;font-weight:700;letter-spacing:-.5px}
+    .logo span{color:var(--accent2)}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .stats{font-size:.75rem;color:var(--muted)}
+    .stats b{color:var(--green)}
+    .theme-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:.9rem;color:var(--text)}
+    .theme-btn:hover{border-color:var(--accent)}
 
-    /* ── STATUS BAR ── */
-    .status-bar {
-      text-align: center;
-      padding: 8px 0 4px;
-      font-size: 0.8rem;
-      color: var(--muted);
-      flex-shrink: 0;
-      min-height: 28px;
-    }
-    .status-bar.connected { color: var(--green); }
-    .status-bar.waiting   { color: var(--accent2); }
-    .status-bar.error     { color: var(--red); }
+    /* LANDING */
+    #landing{align-items:center;justify-content:center;text-align:center;gap:18px;overflow-y:auto;padding:20px 16px}
+    .globe{font-size:3rem;animation:spin 10s linear infinite}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    #landing h1{font-family:var(--fh);font-size:clamp(1.8rem,5vw,3rem);font-weight:700;letter-spacing:-1px;line-height:1.15}
+    #landing h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    #landing p{color:var(--muted);font-size:.95rem;max-width:360px;line-height:1.6}
 
-    /* ── CHAT BOX ── */
-    #chat-box {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      scroll-behavior: smooth;
-    }
-    #chat-box::-webkit-scrollbar { width: 4px; }
-    #chat-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    /* SETUP CARD */
+    .setup-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px}
+    .setup-card label{font-size:.8rem;color:var(--muted);font-weight:500;margin-bottom:4px;display:block}
+    .setup-row{display:flex;gap:10px;align-items:flex-end}
+    .inp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:var(--fb);font-size:.9rem;outline:none;width:100%;transition:border-color .15s}
+    .inp:focus{border-color:var(--accent)}
+    .inp::placeholder{color:var(--muted)}
+    select.inp{cursor:pointer}
 
-    /* ── LANDING SCREEN ── */
-    #landing {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      gap: 20px;
-      padding: 20px;
-    }
-    #landing h1 {
-      font-family: var(--font-head);
-      font-size: clamp(2rem, 6vw, 3.2rem);
-      font-weight: 700;
-      line-height: 1.15;
-      letter-spacing: -1px;
-    }
-    #landing h1 em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    #landing p {
-      color: var(--muted);
-      font-size: 1rem;
-      max-width: 380px;
-      line-height: 1.6;
-    }
-    .globe {
-      font-size: 3.5rem;
-      animation: spin 8s linear infinite;
-    }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    /* INTERESTS */
+    .interest-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .tag{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:.78rem;cursor:pointer;transition:all .15s;color:var(--muted)}
+    .tag.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .tag:hover:not(.active){border-color:var(--accent);color:var(--accent2)}
 
-    .rules {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 22px;
-      font-size: 0.82rem;
-      color: var(--muted);
-      text-align: left;
-      max-width: 380px;
-      width: 100%;
-      line-height: 1.8;
-    }
-    .rules b { color: var(--text); }
+    /* BUTTONS */
+    .btn{border:none;border-radius:12px;font-family:var(--fb);font-size:.88rem;font-weight:600;cursor:pointer;padding:0 20px;height:46px;transition:all .15s;white-space:nowrap}
+    .btn:active{transform:scale(.96)}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;width:100%;height:52px;font-size:1rem;border-radius:14px}
+    .btn-primary:hover{opacity:.9}
+    .btn-icon{background:var(--card);border:1px solid var(--border);color:var(--text);min-width:46px;padding:0 14px}
+    .btn-icon:hover{border-color:var(--accent);color:var(--accent2)}
+    .btn-red{background:var(--card);border:1px solid var(--border);color:var(--red)}
+    .btn-red:hover{background:rgba(255,92,122,.08);border-color:var(--red)}
+    .btn-send{background:var(--accent);color:#fff;min-width:46px;padding:0 14px}
+    .btn-send:hover{background:var(--accent2)}
+    .btn-send:disabled,.btn-icon:disabled{opacity:.4;cursor:not-allowed}
 
-    /* ── MESSAGES ── */
-    .msg {
-      max-width: 72%;
-      padding: 10px 14px;
-      border-radius: 18px;
-      font-size: 0.92rem;
-      line-height: 1.5;
-      word-break: break-word;
-      animation: fadeUp 0.18s ease;
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform: translateY(6px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
-    .msg.me {
-      background: var(--me-bubble);
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-      color: #fff;
-    }
-    .msg.them {
-      background: var(--them-bubble);
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-      border: 1px solid var(--border);
-    }
-    .msg.system {
-      background: transparent;
-      align-self: center;
-      font-size: 0.78rem;
-      color: var(--muted);
-      padding: 4px 10px;
-      border: 1px dashed var(--border);
-      border-radius: 20px;
-      max-width: 90%;
-      text-align: center;
-    }
-    .msg-time {
-      font-size: 0.66rem;
-      color: rgba(255,255,255,0.35);
-      margin-top: 3px;
-      text-align: right;
-    }
-    .msg.them .msg-time { text-align: left; color: var(--muted); opacity: .6; }
+    /* STATUS */
+    .status-bar{text-align:center;padding:7px 0;font-size:.78rem;color:var(--muted);flex-shrink:0;min-height:26px}
+    .status-bar.connected{color:var(--green)}
+    .status-bar.waiting{color:var(--accent2)}
 
-    /* ── TYPING ── */
-    #typing-indicator {
-      display: none;
-      align-self: flex-start;
-      padding: 10px 14px;
-      background: var(--them-bubble);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      border-bottom-left-radius: 4px;
-      gap: 4px;
-    }
-    #typing-indicator.show { display: flex; }
-    .typing-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      animation: bounce 1.2s infinite;
-    }
-    .typing-dot:nth-child(2) { animation-delay: .2s; }
-    .typing-dot:nth-child(3) { animation-delay: .4s; }
-    @keyframes bounce {
-      0%,60%,100% { transform: translateY(0); }
-      30% { transform: translateY(-5px); }
-    }
+    /* PARTNER INFO BAR */
+    #partner-bar{display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--card);border-radius:10px;margin:6px 0;flex-shrink:0;border:1px solid var(--border)}
+    #partner-bar.show{display:flex}
+    .partner-flag{font-size:1.4rem}
+    .partner-name{font-weight:600;font-size:.9rem}
+    .partner-country{font-size:.75rem;color:var(--muted)}
+    .partner-interests{font-size:.72rem;color:var(--accent2);margin-left:auto}
 
-    /* ── INPUT AREA ── */
-    .input-area {
-      padding: 12px 0 16px;
-      flex-shrink: 0;
-      border-top: 1px solid var(--border);
-    }
-    .input-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-    }
-    #msg-input {
-      flex: 1;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 11px 16px;
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.92rem;
-      outline: none;
-      resize: none;
-      min-height: 46px;
-      max-height: 120px;
-      transition: border-color .15s;
-    }
-    #msg-input:focus { border-color: var(--accent); }
-    #msg-input::placeholder { color: var(--muted); }
-    #msg-input:disabled { opacity: .4; cursor: not-allowed; }
+    /* CHAT */
+    #chat-box{flex:1;overflow-y:auto;padding:12px 4px;display:flex;flex-direction:column;gap:7px;scroll-behavior:smooth}
+    #chat-box::-webkit-scrollbar{width:3px}
+    #chat-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-    /* ── BUTTONS ── */
-    .btn {
-      border: none;
-      border-radius: 12px;
-      font-family: var(--font-body);
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 0 20px;
-      height: 46px;
-      transition: all .15s;
-      white-space: nowrap;
-    }
-    .btn:active { transform: scale(.96); }
-    .btn-send {
-      background: var(--accent);
-      color: #fff;
-      min-width: 46px;
-      padding: 0 14px;
-    }
-    .btn-send:hover { background: var(--accent2); }
-    .btn-send:disabled { opacity: .4; cursor: not-allowed; }
+    .msg{max-width:72%;padding:9px 13px;border-radius:18px;font-size:.9rem;line-height:1.5;word-break:break-word;animation:fadeUp .15s ease}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    .msg.me{background:var(--me);align-self:flex-end;border-bottom-right-radius:4px;color:#fff}
+    .msg.them{background:var(--them);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
+    .msg.system{background:transparent;align-self:center;font-size:.75rem;color:var(--muted);padding:3px 10px;border:1px dashed var(--border);border-radius:20px;max-width:90%;text-align:center}
+    .msg-time{font-size:.65rem;color:rgba(255,255,255,.3);margin-top:3px;text-align:right}
+    .msg.them .msg-time{color:var(--muted);opacity:.6;text-align:left}
+    [data-theme="light"] .msg.me .msg-time{color:rgba(255,255,255,.5)}
 
-    .controls {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .btn-start {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      flex: 1;
-      font-size: 1rem;
-      height: 52px;
-      border-radius: 14px;
-    }
-    .btn-start:hover { opacity: .9; }
-    .btn-next {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-    .btn-next:hover { border-color: var(--accent); color: var(--accent2); }
-    .btn-stop {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--red);
-    }
-    .btn-stop:hover { background: rgba(255,92,122,.08); border-color: var(--red); }
+    /* TYPING */
+    #typing-indicator{display:none;align-self:flex-start;padding:9px 13px;background:var(--them);border:1px solid var(--border);border-radius:18px;border-bottom-left-radius:4px;gap:4px}
+    #typing-indicator.show{display:flex}
+    .tdot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}
+    .tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 
-    /* ── STATES ── */
-    .hidden { display: none !important; }
+    /* INPUT */
+    .input-area{padding:10px 0 14px;flex-shrink:0;border-top:1px solid var(--border)}
+    .controls{display:flex;gap:7px;margin-bottom:8px}
+    .input-row{display:flex;gap:7px;align-items:flex-end}
+    textarea.inp{flex:1;resize:none;min-height:44px;max-height:110px;padding:10px 14px;border-radius:12px}
 
-    /* ── MOBILE ── */
-    @media (max-width: 500px) {
-      .app { padding: 0 10px; }
-      .logo { font-size: 1.1rem; }
-      .stats { gap: 10px; font-size: 0.72rem; }
-      #landing h1 { font-size: 1.8rem; }
-      .btn { font-size: 0.82rem; padding: 0 12px; }
-    }
+    /* EMOJI PICKER */
+    .emoji-wrap{position:relative}
+    .emoji-grid{position:absolute;bottom:52px;right:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;display:none;grid-template-columns:repeat(8,1fr);gap:4px;z-index:100;width:260px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    .emoji-grid.open{display:grid}
+    .emoji-grid span{font-size:1.3rem;cursor:pointer;text-align:center;padding:3px;border-radius:6px;transition:background .1s}
+    .emoji-grid span:hover{background:var(--border)}
 
-    /* ── SPINNER ── */
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
-      margin-right: 6px;
+    /* REPORT TOAST */
+    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:.85rem;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+    .toast.show{opacity:1}
+
+    /* RULES */
+    .rules{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;font-size:.78rem;color:var(--muted);text-align:left;max-width:420px;width:100%;line-height:1.8}
+    .rules b{color:var(--text)}
+
+    @media(max-width:500px){
+      .screen{padding:0 10px}
+      .logo{font-size:1.1rem}
+      .btn{font-size:.8rem;padding:0 10px}
+      #landing h1{font-size:1.6rem}
     }
   </style>
 </head>
 <body>
-<div class="app">
 
-  <!-- HEADER -->
+<!-- ── LANDING SCREEN ── -->
+<div class="screen active" id="screen-landing">
   <header>
     <div class="logo">Stranger<span>Chat</span></div>
-    <div class="stats">
-      <span><span class="dot"></span><span id="stat-online">0</span> online</span>
-      <span id="stat-waiting">0 waiting</span>
+    <div class="header-right">
+      <div class="stats"><b id="s-online">0</b> online · <b id="s-waiting">0</b> waiting</div>
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️</button>
     </div>
   </header>
 
-  <!-- STATUS -->
-  <div class="status-bar" id="status-bar">Connecting…</div>
-
-  <!-- LANDING -->
   <div id="landing">
     <div class="globe">🌍</div>
     <h1>Chat with the<br/><em>whole world</em></h1>
-    <p>One click. A random stranger. Anywhere on Earth. Text only — clean, simple, anonymous.</p>
+    <p>Anonymous. Instant. Worldwide. Pick your name and start chatting.</p>
+
+    <div class="setup-card">
+      <!-- Username + Country -->
+      <div class="setup-row">
+        <div style="flex:1">
+          <label>Your nickname</label>
+          <input class="inp" id="inp-username" placeholder="e.g. CoolDude99" maxlength="20"/>
+        </div>
+        <div style="flex:1">
+          <label>Your country</label>
+          <select class="inp" id="inp-country"></select>
+        </div>
+      </div>
+
+      <!-- Interests -->
+      <div>
+        <label>Interests (optional — match with similar people)</label>
+        <div class="interest-tags" id="interest-tags"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="startChat()">Start Chatting →</button>
+    </div>
+
     <div class="rules">
       <b>Community rules</b><br>
-      • Be respectful to strangers<br>
+      • Be respectful to everyone<br>
       • No hate speech or harassment<br>
-      • No sharing of personal info<br>
+      • No sharing personal information<br>
       • Users under 18 should leave
     </div>
-    <button class="btn btn-start" id="btn-start-landing" onclick="startChat()">
-      Start Chatting →
-    </button>
   </div>
-
-  <!-- CHAT -->
-  <div id="chat-section" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-    <div id="chat-box">
-      <div id="typing-indicator">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
-    </div>
-    <div class="input-area">
-      <div class="controls">
-        <button class="btn btn-next" id="btn-next" onclick="nextStranger()">⏭ Next</button>
-        <button class="btn btn-stop" id="btn-stop" onclick="stopChat()">✕ Stop</button>
-      </div>
-      <div class="input-row">
-        <textarea id="msg-input" placeholder="Type a message…" rows="1" disabled
-          oninput="autoResize(this); onTyping();"
-          onkeydown="handleKey(event)"></textarea>
-        <button class="btn btn-send" id="btn-send" onclick="sendMessage()" disabled>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
+<!-- ── CHAT SCREEN ── -->
+<div class="screen" id="screen-chat">
+  <header>
+    <div class="logo">Stranger<span>Chat</span></div>
+    <div class="header-right">
+      <div class="stats"><b id="s-online2">0</b> online</div>
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn2">☀️</button>
+    </div>
+  </header>
+
+  <div class="status-bar" id="status-bar">Connecting…</div>
+
+  <div id="partner-bar">
+    <span class="partner-flag" id="p-flag">🌍</span>
+    <div>
+      <div class="partner-name" id="p-name">Stranger</div>
+      <div class="partner-country" id="p-country">Unknown</div>
+    </div>
+    <div class="partner-interests" id="p-interests"></div>
+  </div>
+
+  <div id="chat-box">
+    <div id="typing-indicator">
+      <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="controls">
+      <button class="btn btn-icon" onclick="nextStranger()">⏭ Next</button>
+      <button class="btn btn-red" onclick="stopChat()">✕ Stop</button>
+      <button class="btn btn-red" id="btn-report" onclick="reportStranger()" disabled style="margin-left:auto">🚩 Report</button>
+    </div>
+    <div class="input-row">
+      <textarea class="inp" id="msg-input" placeholder="Type a message…" rows="1" disabled
+        oninput="autoResize(this);onTyping()"
+        onkeydown="handleKey(event)"></textarea>
+      <div class="emoji-wrap">
+        <button class="btn btn-icon" onclick="toggleEmoji()" id="btn-emoji">😊</button>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+      <button class="btn btn-send" id="btn-send" onclick="sendMessage()" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  const socket = io();
-  let state = 'idle'; // idle | waiting | chatting
-  let typingTimeout = null;
-  let isTypingSent = false;
+// ── DATA ──
+const COUNTRIES = [
+  {name:'Afghanistan',flag:'🇦🇫'},{name:'Albania',flag:'🇦🇱'},{name:'Algeria',flag:'🇩🇿'},
+  {name:'Argentina',flag:'🇦🇷'},{name:'Australia',flag:'🇦🇺'},{name:'Austria',flag:'🇦🇹'},
+  {name:'Bangladesh',flag:'🇧🇩'},{name:'Belgium',flag:'🇧🇪'},{name:'Brazil',flag:'🇧🇷'},
+  {name:'Canada',flag:'🇨🇦'},{name:'Chile',flag:'🇨🇱'},{name:'China',flag:'🇨🇳'},
+  {name:'Colombia',flag:'🇨🇴'},{name:'Croatia',flag:'🇭🇷'},{name:'Czech Republic',flag:'🇨🇿'},
+  {name:'Denmark',flag:'🇩🇰'},{name:'Egypt',flag:'🇪🇬'},{name:'Ethiopia',flag:'🇪🇹'},
+  {name:'Finland',flag:'🇫🇮'},{name:'France',flag:'🇫🇷'},{name:'Germany',flag:'🇩🇪'},
+  {name:'Ghana',flag:'🇬🇭'},{name:'Greece',flag:'🇬🇷'},{name:'Hungary',flag:'🇭🇺'},
+  {name:'India',flag:'🇮🇳'},{name:'Indonesia',flag:'🇮🇩'},{name:'Iran',flag:'🇮🇷'},
+  {name:'Iraq',flag:'🇮🇶'},{name:'Ireland',flag:'🇮🇪'},{name:'Israel',flag:'🇮🇱'},
+  {name:'Italy',flag:'🇮🇹'},{name:'Japan',flag:'🇯🇵'},{name:'Jordan',flag:'🇯🇴'},
+  {name:'Kenya',flag:'🇰🇪'},{name:'Malaysia',flag:'🇲🇾'},{name:'Mexico',flag:'🇲🇽'},
+  {name:'Morocco',flag:'🇲🇦'},{name:'Nepal',flag:'🇳🇵'},{name:'Netherlands',flag:'🇳🇱'},
+  {name:'New Zealand',flag:'🇳🇿'},{name:'Nigeria',flag:'🇳🇬'},{name:'Norway',flag:'🇳🇴'},
+  {name:'Pakistan',flag:'🇵🇰'},{name:'Peru',flag:'🇵🇪'},{name:'Philippines',flag:'🇵🇭'},
+  {name:'Poland',flag:'🇵🇱'},{name:'Portugal',flag:'🇵🇹'},{name:'Romania',flag:'🇷🇴'},
+  {name:'Russia',flag:'🇷🇺'},{name:'Saudi Arabia',flag:'🇸🇦'},{name:'Singapore',flag:'🇸🇬'},
+  {name:'South Africa',flag:'🇿🇦'},{name:'South Korea',flag:'🇰🇷'},{name:'Spain',flag:'🇪🇸'},
+  {name:'Sri Lanka',flag:'🇱🇰'},{name:'Sweden',flag:'🇸🇪'},{name:'Switzerland',flag:'🇨🇭'},
+  {name:'Thailand',flag:'🇹🇭'},{name:'Turkey',flag:'🇹🇷'},{name:'Ukraine',flag:'🇺🇦'},
+  {name:'United Kingdom',flag:'🇬🇧'},{name:'United States',flag:'🇺🇸'},{name:'Vietnam',flag:'🇻🇳'},
+  {name:'Other',flag:'🌍'}
+];
 
-  // ── DOM refs ──
-  const landing      = document.getElementById('landing');
-  const chatSection  = document.getElementById('chat-section');
-  const chatBox      = document.getElementById('chat-box');
-  const msgInput     = document.getElementById('msg-input');
-  const btnSend      = document.getElementById('btn-send');
-  const statusBar    = document.getElementById('status-bar');
-  const typingEl     = document.getElementById('typing-indicator');
+const INTERESTS = ['Music','Gaming','Movies','Sports','Tech','Travel','Art','Food',
+  'Anime','Books','Fashion','Fitness','Science','Politics','Memes','Language'];
 
-  // ── Socket events ──
-  socket.on('connect', () => setStatus('Connected — start a chat!', ''));
-  socket.on('disconnect', () => setStatus('Disconnected. Refresh the page.', 'error'));
+const EMOJIS = ['😀','😂','😍','🥺','😎','🤔','😭','🔥','❤️','👍','👋','🎉',
+  '😊','🥳','💀','🤣','😅','🙏','✨','💯','😏','🤯','😴','🤑',
+  '👀','🫡','💪','🤝','😬','🥹','😤','🫶'];
 
-  socket.on('stats', ({ online, waiting }) => {
-    document.getElementById('stat-online').textContent = online;
-    document.getElementById('stat-waiting').textContent = `${waiting} waiting`;
+// ── STATE ──
+const socket = io();
+let state = 'idle';
+let typingTimeout = null;
+let isTypingSent = false;
+let selectedInterests = [];
+let isDark = true;
+
+// ── INIT ──
+(function init() {
+  // Populate countries
+  const sel = document.getElementById('inp-country');
+  COUNTRIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = `${c.flag} ${c.name}`;
+    sel.appendChild(opt);
+  });
+  // Default to India
+  sel.value = 'India';
+
+  // Interest tags
+  const container = document.getElementById('interest-tags');
+  INTERESTS.forEach(i => {
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = i;
+    tag.onclick = () => toggleInterest(tag, i);
+    container.appendChild(tag);
   });
 
-  socket.on('waiting', () => {
-    state = 'waiting';
-    setStatus('<span class="spinner"></span>Looking for a stranger…', 'waiting');
-    addMessage('Looking for someone to chat with…', 'system');
+  // Emoji grid
+  const grid = document.getElementById('emoji-grid');
+  EMOJIS.forEach(e => {
+    const span = document.createElement('span');
+    span.textContent = e;
+    span.onclick = () => insertEmoji(e);
+    grid.appendChild(span);
   });
 
-  socket.on('matched', ({ message }) => {
-    state = 'chatting';
-    setStatus('● Connected to a stranger', 'connected');
-    addMessage(message, 'system');
-    enableInput(true);
+  // Close emoji on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.emoji-wrap')) closeEmoji();
+  });
+})();
+
+function toggleInterest(el, interest) {
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) selectedInterests.push(interest);
+  else selectedInterests = selectedInterests.filter(i => i !== interest);
+}
+
+// ── SOCKET EVENTS ──
+socket.on('connect', () => setStatus('Connected — ready to chat!', ''));
+socket.on('disconnect', () => setStatus('Disconnected. Refresh the page.', 'error'));
+
+socket.on('stats', ({ online, waiting }) => {
+  document.getElementById('s-online').textContent = online;
+  document.getElementById('s-waiting').textContent = waiting;
+  document.getElementById('s-online2').textContent = online;
+});
+
+socket.on('waiting', () => {
+  state = 'waiting';
+  setStatus('🔍 Looking for a stranger…', 'waiting');
+  addMsg('Searching for someone to chat with…', 'system');
+  hidePartnerBar();
+});
+
+socket.on('matched', ({ partner }) => {
+  state = 'chatting';
+  setStatus('● Connected!', 'connected');
+  showPartnerBar(partner);
+  addMsg(`You're now chatting with ${partner.flag} ${partner.username} from ${partner.country}. Say hi!`, 'system');
+  enableInput(true);
+  document.getElementById('btn-report').disabled = false;
+  playSound();
+});
+
+socket.on('message', ({ text }) => {
+  hideTyping();
+  addMsg(text, 'them');
+});
+
+socket.on('typing', isTyping => isTyping ? showTyping() : hideTyping());
+
+socket.on('strangerLeft', () => {
+  state = 'idle';
+  hideTyping();
+  enableInput(false);
+  document.getElementById('btn-report').disabled = true;
+  setStatus('Stranger disconnected. Click Next for a new chat.', '');
+  addMsg('Stranger has disconnected.', 'system');
+  hidePartnerBar();
+});
+
+socket.on('idle', () => {
+  state = 'idle';
+  enableInput(false);
+  setStatus('Stopped.', '');
+});
+
+socket.on('reported', () => showToast('⚠️ Stranger reported. Finding you a new chat…'));
+socket.on('banned', () => showToast('🚫 You have been banned for violations.'));
+
+// ── ACTIONS ──
+function startChat() {
+  const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
+  const countryName = document.getElementById('inp-country').value;
+  const country = COUNTRIES.find(c => c.name === countryName) || { name: 'Unknown', flag: '🌍' };
+
+  socket.emit('setInfo', {
+    username,
+    country: country.name,
+    flag: country.flag,
+    interests: selectedInterests
   });
 
-  socket.on('message', ({ text }) => {
-    hideTyping();
-    addMessage(text, 'them');
-  });
+  showScreen('screen-chat');
+  socket.emit('findStranger', { interests: selectedInterests });
+}
 
-  socket.on('typing', (isTyping) => {
-    isTyping ? showTyping() : hideTyping();
-  });
+function nextStranger() {
+  hideTyping();
+  enableInput(false);
+  clearChat();
+  hidePartnerBar();
+  document.getElementById('btn-report').disabled = true;
+  socket.emit('disconnect_chat');
+  setTimeout(() => socket.emit('findStranger', { interests: selectedInterests }), 100);
+}
 
-  socket.on('strangerLeft', () => {
-    state = 'idle';
-    hideTyping();
-    enableInput(false);
-    setStatus('Stranger disconnected. Click Next for a new chat.', '');
-    addMessage('Stranger has disconnected.', 'system');
-  });
+function stopChat() {
+  socket.emit('disconnect_chat');
+  hideTyping();
+  enableInput(false);
+  hidePartnerBar();
+  clearChat();
+  showScreen('screen-landing');
+}
 
-  socket.on('idle', () => {
-    state = 'idle';
-    enableInput(false);
-    setStatus('Stopped. Click Start to find a new stranger.', '');
-  });
+function reportStranger() {
+  socket.emit('report');
+  showToast('🚩 Reported! Moving to next stranger…');
+  document.getElementById('btn-report').disabled = true;
+  setTimeout(() => nextStranger(), 1500);
+}
 
-  // ── Actions ──
-  function startChat() {
-    showChat();
-    socket.emit('findStranger');
+function sendMessage() {
+  const text = document.getElementById('msg-input').value.trim();
+  if (!text || state !== 'chatting') return;
+  socket.emit('message', { text });
+  socket.emit('typing', false);
+  isTypingSent = false;
+  addMsg(text, 'me');
+  document.getElementById('msg-input').value = '';
+  document.getElementById('msg-input').style.height = '';
+  document.getElementById('msg-input').focus();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function onTyping() {
+  if (state !== 'chatting') return;
+  if (!isTypingSent) { socket.emit('typing', true); isTypingSent = true; }
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => { socket.emit('typing', false); isTypingSent = false; }, 1500);
+}
+
+// ── UI ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function addMsg(text, type) {
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+  div.innerHTML = escHtml(text);
+  if (type !== 'system') {
+    const t = document.createElement('div');
+    t.className = 'msg-time';
+    t.textContent = now;
+    div.appendChild(t);
   }
+  const chatBox = document.getElementById('chat-box');
+  chatBox.insertBefore(div, document.getElementById('typing-indicator'));
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-  function nextStranger() {
-    hideTyping();
-    enableInput(false);
-    clearChat();
-    socket.emit('disconnect_chat');
-    setTimeout(() => socket.emit('findStranger'), 100);
-  }
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
 
-  function stopChat() {
-    socket.emit('disconnect_chat');
-    hideTyping();
-    enableInput(false);
-    showLanding();
-  }
+function clearChat() {
+  document.querySelectorAll('#chat-box .msg').forEach(m => m.remove());
+}
 
-  function sendMessage() {
-    const text = msgInput.value.trim();
-    if (!text || state !== 'chatting') return;
-    socket.emit('message', { text });
-    socket.emit('typing', false);
-    isTypingSent = false;
-    addMessage(text, 'me');
-    msgInput.value = '';
-    msgInput.style.height = '';
-    msgInput.focus();
-  }
+function showTyping() {
+  document.getElementById('typing-indicator').classList.add('show');
+  const cb = document.getElementById('chat-box');
+  cb.scrollTop = cb.scrollHeight;
+}
+function hideTyping() { document.getElementById('typing-indicator').classList.remove('show'); }
 
-  function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }
+function enableInput(on) {
+  document.getElementById('msg-input').disabled = !on;
+  document.getElementById('btn-send').disabled = !on;
+  document.getElementById('btn-emoji').disabled = !on;
+  if (on) document.getElementById('msg-input').focus();
+}
 
-  function onTyping() {
-    if (state !== 'chatting') return;
-    if (!isTypingSent) {
-      socket.emit('typing', true);
-      isTypingSent = true;
-    }
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      socket.emit('typing', false);
-      isTypingSent = false;
-    }, 1500);
-  }
+function setStatus(html, cls) {
+  const el = document.getElementById('status-bar');
+  el.innerHTML = html;
+  el.className = 'status-bar' + (cls ? ` ${cls}` : '');
+}
 
-  // ── UI helpers ──
-  function addMessage(text, type) {
-    // Move typing indicator to end always
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const div = document.createElement('div');
-    div.className = `msg ${type}`;
-    div.innerHTML = escapeHtml(text);
-    if (type !== 'system') {
-      const t = document.createElement('div');
-      t.className = 'msg-time';
-      t.textContent = now;
-      div.appendChild(t);
-    }
-    chatBox.insertBefore(div, typingEl);
-    scrollBottom();
-  }
+function showPartnerBar(partner) {
+  document.getElementById('p-flag').textContent = partner.flag || '🌍';
+  document.getElementById('p-name').textContent = partner.username || 'Stranger';
+  document.getElementById('p-country').textContent = partner.country || 'Unknown';
+  document.getElementById('partner-bar').classList.add('show');
+}
+function hidePartnerBar() { document.getElementById('partner-bar').classList.remove('show'); }
 
-  function escapeHtml(text) {
-    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-               .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
-  }
+function autoResize(el) {
+  el.style.height = '';
+  el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+}
 
-  function clearChat() {
-    const msgs = chatBox.querySelectorAll('.msg');
-    msgs.forEach(m => m.remove());
-  }
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const icon = isDark ? '☀️' : '🌙';
+  document.getElementById('theme-btn').textContent = icon;
+  document.getElementById('theme-btn2').textContent = icon;
+}
 
-  function showTyping() {
-    typingEl.classList.add('show');
-    scrollBottom();
-  }
-  function hideTyping() { typingEl.classList.remove('show'); }
+function toggleEmoji() {
+  document.getElementById('emoji-grid').classList.toggle('open');
+}
+function closeEmoji() { document.getElementById('emoji-grid').classList.remove('open'); }
+function insertEmoji(e) {
+  const inp = document.getElementById('msg-input');
+  inp.value += e;
+  inp.focus();
+  closeEmoji();
+}
 
-  function scrollBottom() {
-    setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 30);
-  }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-  function setStatus(html, type) {
-    statusBar.innerHTML = html;
-    statusBar.className = 'status-bar' + (type ? ` ${type}` : '');
-  }
-
-  function enableInput(on) {
-    msgInput.disabled = !on;
-    btnSend.disabled = !on;
-    if (on) msgInput.focus();
-  }
-
-  function showChat() {
-    landing.classList.add('hidden');
-    chatSection.classList.remove('hidden');
-    chatSection.style.display = 'flex';
-  }
-
-  function showLanding() {
-    chatSection.classList.add('hidden');
-    landing.classList.remove('hidden');
-    clearChat();
-  }
-
-  function autoResize(el) {
-    el.style.height = '';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  }
+function playSound() {
+  try {
+    const ctx = new AudioContext();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.setValueAtTime(520, ctx.currentTime);
+    o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+    g.gain.setValueAtTime(0.1, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.start(); o.stop(ctx.currentTime + 0.4);
+  } catch(e) {}
+}
 </script>
 </body>
 </html>
