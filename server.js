@@ -81,9 +81,24 @@ io.on('connection', (socket) => {
     removeFromQueues(socket.id);
 
     // Add to queue
-    const key = interests.length > 0 ? interests[0].toLowerCase() : 'any';
-    if (!waitingQueues[key]) waitingQueues[key] = [];
+    // Add user to all interest queues
+if (interests.length > 0) {
+  for (const interest of interests) {
+    const key = interest.toLowerCase();
+
+    if (!waitingQueues[key]) {
+      waitingQueues[key] = [];
+    }
+
     waitingQueues[key].push(socket.id);
+  }
+} else {
+  if (!waitingQueues.any) {
+    waitingQueues.any = [];
+  }
+
+  waitingQueues.any.push(socket.id);
+}
     socket.emit('waiting');
     broadcastStats();
     tryMatch(interests);
