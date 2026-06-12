@@ -5,32 +5,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const axios = require('axios');
-const app = express();
-
-app.use(express.json());
-
-const server = http.createServer(app);
-io.on('connection', (socket) => {
-  app.post('/verify-turnstile', async (req, res) => {
-  try {
-    const token = req.body.token;
-
-    const response = await axios.post(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      new URLSearchParams({
-        secret: process.env.TURNSTILE_SECRET,
-        response: token
-      })
-    );
-
-    res.json(response.data);
-
-  } catch (err) {
-    res.status(500).json({
-      success: false
-    });
-  }
-});
 
 const app = express();
 const server = http.createServer(app);
@@ -38,23 +12,39 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const waitingQueues = {}; // interest -> [socketId]
-const pairs = new Map();  // socketId -> partnerId
-const userInfo = new Map(); // socketId -> { username, country, flag, interests }
-const reports = new Map();  // socketId -> reportCount
+// ── TURNSTILE VERIFY ROUTE ──
+app.post('/verify-turnstile', async (req, res) => {
+  try {
+    const token = req.body.token;
+    const response = await axios.post(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      new URLSearchParams({
+        secret: process.env.TURNSTILE_SECRET,
+        response: token
+      })
+    );
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// ── STATE ──
+const waitingQueues = {};
+const pairs = new Map();
+const userInfo = new Map();
+const reports = new Map();
 
 function getTotalUsers() { return io.sockets.sockets.size; }
-
 function getTotalWaiting() {
   return Object.values(waitingQueues).reduce((a, q) => a + q.length, 0);
 }
-
 function broadcastStats() {
   io.emit('stats', { online: getTotalUsers(), waiting: getTotalWaiting() });
 }
-
 function removeFromQueues(socketId) {
   for (const key of Object.keys(waitingQueues)) {
     const qi = waitingQueues[key].indexOf(socketId);
@@ -63,7 +53,6 @@ function removeFromQueues(socketId) {
 }
 
 function tryMatch(interests) {
-  // Try to match by shared interest first, then 'any'
   const keys = interests.length > 0
     ? [...interests.map(i => i.toLowerCase()), 'any']
     : ['any'];
@@ -91,6 +80,7 @@ function tryMatch(interests) {
   }
 }
 
+// ── SOCKET EVENTS ──
 io.on('connection', (socket) => {
   broadcastStats();
 
@@ -107,25 +97,17 @@ io.on('connection', (socket) => {
     }
     removeFromQueues(socket.id);
 
-    // Add to queue
-    // Add user to all interest queues
-if (interests.length > 0) {
-  for (const interest of interests) {
-    const key = interest.toLowerCase();
-
-    if (!waitingQueues[key]) {
-      waitingQueues[key] = [];
+    if (interests.length > 0) {
+      for (const interest of interests) {
+        const key = interest.toLowerCase();
+        if (!waitingQueues[key]) waitingQueues[key] = [];
+        waitingQueues[key].push(socket.id);
+      }
+    } else {
+      if (!waitingQueues.any) waitingQueues.any = [];
+      waitingQueues.any.push(socket.id);
     }
 
-    waitingQueues[key].push(socket.id);
-  }
-} else {
-  if (!waitingQueues.any) {
-    waitingQueues.any = [];
-  }
-
-  waitingQueues.any.push(socket.id);
-}
     socket.emit('waiting');
     broadcastStats();
     tryMatch(interests);
