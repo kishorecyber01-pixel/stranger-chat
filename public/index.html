@@ -12,6 +12,10 @@
     gtag('config', 'G-R2YBDBR60T');
   </script>
 
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  
+
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>StrangerChat — Talk to the World</title>
@@ -183,7 +187,14 @@
         <div class="interest-tags" id="interest-tags"></div>
       </div>
 
-      <button class="btn btn-primary" onclick="startChat()">Start Chatting →</button>
+      <div
+  class="cf-turnstile"
+  data-sitekey="0x4AAAAAADjhTyRqdkyXeLMj">
+</div>
+
+<button class="btn btn-primary" onclick="startChat()">
+  Start Chatting →
+</button>
     </div>
 
     <div class="rules">
@@ -387,9 +398,26 @@ socket.on('banned', () => showToast('🚫 You have been banned for violations.')
 
 // ── ACTIONS ──
 function startChat() {
+
+  const token =
+    document.querySelector(
+      '[name="cf-turnstile-response"]'
+    )?.value;
+
+  if (!token) {
+    alert("Please complete the CAPTCHA");
+    return;
+  }
+
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
   const countryName = document.getElementById('inp-country').value;
-  const country = COUNTRIES.find(c => c.name === countryName) || { name: 'Unknown', flag: '🌍' };
+  const country = COUNTRIES.find(c => c.name === countryName) || {
+    name: 'Unknown',
+    flag: '🌍'
+  };
+
+  ...
+}
 
   socket.emit('setInfo', {
     username,

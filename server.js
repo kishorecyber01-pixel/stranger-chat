@@ -4,6 +4,33 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const axios = require('axios');
+const app = express();
+
+app.use(express.json());
+
+const server = http.createServer(app);
+io.on('connection', (socket) => {
+  app.post('/verify-turnstile', async (req, res) => {
+  try {
+    const token = req.body.token;
+
+    const response = await axios.post(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      new URLSearchParams({
+        secret: process.env.TURNSTILE_SECRET,
+        response: token
+      })
+    );
+
+    res.json(response.data);
+
+  } catch (err) {
+    res.status(500).json({
+      success: false
+    });
+  }
+});
 
 const app = express();
 const server = http.createServer(app);
