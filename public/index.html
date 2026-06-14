@@ -9,22 +9,6 @@
     gtag('config', 'G-R2YBDBR60T');
   </script>
 
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-  <script>
-    // Must be global before Turnstile fires
-    var captchaToken = null;
-    function onCaptchaSuccess(token) {
-      captchaToken = token;
-      var captchaScreen = document.getElementById('screen-captcha');
-      captchaScreen.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      captchaScreen.style.opacity = '0';
-      captchaScreen.style.transform = 'scale(0.97)';
-      setTimeout(function() {
-        document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-        document.getElementById('screen-landing').classList.add('active');
-      }, 320);
-    }
-  </script>
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
@@ -619,70 +603,6 @@
     }
     .toast.show { opacity: 1; }
 
-    /* ── CAPTCHA SCREEN ── */
-    #screen-captcha {
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-    }
-    .captcha-card {
-      background: var(--card);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 36px 28px;
-      width: 100%;
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-    .captcha-logo {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    .captcha-logo-icon {
-      width: 52px; height: 52px;
-      background: var(--me-bubble);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.6rem;
-      box-shadow: 0 8px 24px var(--glow);
-    }
-    .captcha-logo h2 {
-      font-family: var(--ff);
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-    .captcha-logo h2 span { color: var(--accent3); }
-    .captcha-desc {
-      text-align: center;
-      font-size: .82rem;
-      color: var(--muted2);
-      line-height: 1.6;
-    }
-    .captcha-widget-wrap {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-    }
-    .captcha-widget-wrap .cf-turnstile {
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .captcha-footer {
-      font-size: .7rem;
-      color: var(--muted);
-      text-align: center;
-    }
-
     /* ── LIGHT THEME ── */
     [data-theme="light"] {
       --bg: #f5f4ff;
@@ -716,25 +636,8 @@
   <div class="bg-orb bg-orb-3"></div>
 </div>
 
-<!-- ── CAPTCHA GATE SCREEN ── -->
-<div class="screen active" id="screen-captcha">
-  <div class="captcha-card">
-    <div class="captcha-logo">
-      <div class="captcha-logo-icon">💬</div>
-      <h2>Stranger<span>Chat</span></h2>
-    </div>
-    <div class="captcha-desc">
-      Quick human check before you start chatting with strangers worldwide 🌍
-    </div>
-    <div class="captcha-widget-wrap">
-      <div class="cf-turnstile" data-sitekey="0x4AAAAAADjhTyRqdkyXeLMj" data-callback="onCaptchaSuccess"></div>
-    </div>
-    <div class="captcha-footer">Verified once per session · Takes 1 second</div>
-  </div>
-</div>
-
 <!-- ── LANDING SCREEN ── -->
-<div class="screen" id="screen-landing">
+<div class="screen active" id="screen-landing">
   <header>
     <div class="logo">
       <div class="logo-icon">💬</div>
@@ -892,16 +795,6 @@ let selectedInterests = [];
 let isDark = true;
 let userCountry = 'Unknown';
 let userFlag = '🌍';
-// captchaToken is declared globally in <head>
-
-function onCaptchaSuccess(token) {
-  captchaToken = token;
-  const captchaScreen = document.getElementById('screen-captcha');
-  captchaScreen.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-  captchaScreen.style.opacity = '0';
-  captchaScreen.style.transform = 'scale(0.97)';
-  setTimeout(() => showScreen('screen-landing'), 320);
-}
 
 (function init() {
   // ── COUNTRY DETECTION ──
@@ -1015,13 +908,7 @@ socket.on('idle', () => {
 socket.on('reported', () => showToast('⚠️ Stranger reported. Finding you a new chat…'));
 socket.on('banned', () => showToast('🚫 You have been banned for violations.'));
 
-async function startChat() {
-  if (!captchaToken) {
-    // Shouldn't happen, but safety net
-    showScreen('screen-captcha');
-    return;
-  }
-
+function startChat() {
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
   socket.emit('setInfo', {
     username,

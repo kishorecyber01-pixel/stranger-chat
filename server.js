@@ -5,6 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const axios = require('axios');
+const session = require('express-session');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,6 +14,22 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'strangerchat-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+}));
+
+// Serve captcha gate for first-time visitors
+app.get('/', (req, res) => {
+  if (req.session.verified) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'captcha.html'));
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── TURNSTILE VERIFY ROUTE ──
@@ -26,6 +43,9 @@ app.post('/verify-turnstile', async (req, res) => {
         response: token
       })
     );
+    if (response.data.success) {
+      req.session.verified = true;
+    }
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false });

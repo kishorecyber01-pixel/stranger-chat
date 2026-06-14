@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>StrangerChat — Verify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #07070f;
+      --card: #13131f;
+      --border2: #ffffff20;
+      --accent: #7c3aed;
+      --accent2: #a855f7;
+      --accent3: #c084fc;
+      --glow: #7c3aed40;
+      --green: #10b981;
+      --text: #f1f0ff;
+      --muted: #6b6b8a;
+      --muted2: #9292b0;
+      --ff: 'Outfit', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--ff);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Background orbs */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.3;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+    .bg-orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #7c3aed, transparent 70%);
+      top: -150px; left: -100px;
+      animation-duration: 14s;
+    }
+    .bg-orb-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #a855f7, transparent 70%);
+      bottom: -100px; right: -80px;
+      animation-duration: 10s;
+      animation-delay: -5s;
+    }
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    @keyframes drift {
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(30px,-40px) scale(1.1); }
+      100% { transform: translate(-20px,20px) scale(0.95); }
+    }
+
+    /* Card */
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 40px 32px 36px;
+      width: 100%;
+      max-width: 360px;
+      margin: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.1);
+      animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 0 8px 32px var(--glow);
+    }
+    .logo-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .logo-name span { color: var(--accent3); }
+
+    /* Text */
+    .subtitle {
+      text-align: center;
+      color: var(--muted2);
+      font-size: .85rem;
+      line-height: 1.6;
+    }
+
+    /* Divider */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border2);
+    }
+
+    /* Turnstile centered */
+    .turnstile-wrap {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    /* Status messages */
+    .status {
+      font-size: .78rem;
+      color: var(--muted);
+      text-align: center;
+      min-height: 20px;
+      transition: color 0.2s;
+    }
+    .status.verifying { color: var(--accent3); }
+    .status.success   { color: var(--green); }
+    .status.error     { color: #f43f5e; }
+
+    /* Footer */
+    .footer {
+      font-size: .68rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: var(--accent3);
+      text-decoration: none;
+    }
+
+    /* Loading overlay after success */
+    .redirect-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: var(--bg);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    .redirect-overlay.show { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--accent2);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .redirect-text {
+      color: var(--muted2);
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-canvas">
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+</div>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">💬</div>
+    <div class="logo-name">Stranger<span>Chat</span></div>
+  </div>
+
+  <div class="subtitle">
+    One quick check before you start chatting with strangers worldwide 🌍
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="turnstile-wrap">
+    <div class="cf-turnstile"
+      data-sitekey="0x4AAAAAADjhTyRqdkyXeLMj"
+      data-callback="onCaptchaVerified"
+      data-theme="dark">
+    </div>
+  </div>
+
+  <div class="status" id="status-msg">Complete the check above to continue</div>
+
+  <div class="footer">
+    Protected by Cloudflare Turnstile · <a href="#">Privacy</a>
+  </div>
+</div>
+
+<!-- Shown while redirecting -->
+<div class="redirect-overlay" id="redirect-overlay">
+  <div class="spinner"></div>
+  <div class="redirect-text">Verified! Taking you in…</div>
+</div>
+
+<script>
+  function onCaptchaVerified(token) {
+    const statusEl = document.getElementById('status-msg');
+    statusEl.textContent = 'Verifying…';
+    statusEl.className = 'status verifying';
+
+    fetch('/verify-turnstile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.textContent = '✓ Verified!';
+        statusEl.className = 'status success';
+        // Store verification in sessionStorage so index.html knows it passed
+        sessionStorage.setItem('captcha_verified', '1');
+        // Show loading overlay then redirect
+        document.getElementById('redirect-overlay').classList.add('show');
+        setTimeout(() => { window.location.href = '/'; }, 600);
+      } else {
+        statusEl.textContent = 'Verification failed — please try again.';
+        statusEl.className = 'status error';
+        if (window.turnstile) window.turnstile.reset();
+      }
+    })
+    .catch(() => {
+      statusEl.textContent = 'Network error — please refresh and try again.';
+      statusEl.className = 'status error';
+      if (window.turnstile) window.turnstile.reset();
+    });
+  }
+</script>
+</body>
+</html>
