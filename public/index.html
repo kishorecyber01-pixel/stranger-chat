@@ -845,6 +845,84 @@
     .video-status.connected { color: var(--green); }
     .video-status.waiting { color: var(--accent3); }
 
+
+    /* ── GENDER FILTER ── */
+    .gender-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    .gender-btn {
+      flex: 1;
+      padding: 9px 8px;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--muted2);
+      font-family: var(--ff);
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .gender-btn:hover { border-color: var(--accent2); color: var(--text); }
+    .gender-btn.active {
+      background: rgba(124,58,237,0.2);
+      border-color: var(--accent2);
+      color: var(--accent3);
+      box-shadow: 0 0 12px rgba(168,85,247,0.15);
+    }
+
+    /* ── MANUAL INTERESTS ── */
+    .interest-input-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      cursor: text;
+      transition: border-color .2s, box-shadow .2s;
+      min-height: 44px;
+    }
+    .interest-input-wrap:focus-within {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+    }
+    .interest-inp {
+      border: none !important;
+      background: transparent !important;
+      padding: 2px 4px !important;
+      font-size: .82rem;
+      min-width: 120px;
+      flex: 1;
+      box-shadow: none !important;
+      outline: none;
+    }
+    .interest-tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(124,58,237,0.2);
+      border: 1px solid var(--accent2);
+      color: var(--accent3);
+      border-radius: 20px;
+      padding: 3px 10px 3px 12px;
+      font-size: .75rem;
+      font-family: var(--ff);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      animation: msgIn .15s ease;
+    }
+    .interest-tag-chip:hover { background: rgba(244,63,94,0.15); border-color: var(--red); color: var(--red); }
+    .interest-tag-chip .chip-x { font-size: .7rem; opacity: .7; }
+
+    /* ── SCREENSHOT BLOCK ── */
+    @media print { body { display: none !important; } }
+
     /* ── LIGHT THEME ── */
     [data-theme="light"] {
       --bg: #f5f4ff;
@@ -914,10 +992,35 @@
       <input class="inp" id="inp-username" placeholder="e.g. CoolDude99" maxlength="20"/>
     </div>
 
-    <!-- Interests -->
+    <!-- Gender Filter -->
     <div style="width:100%">
-      <span class="field-label">Interests — match with similar people</span>
-      <div class="interest-wrap" id="interest-tags"></div>
+      <span class="field-label">👤 I am</span>
+      <div class="gender-row">
+        <button class="gender-btn active" id="g-male" onclick="selectGender('male', this)">♂ Male</button>
+        <button class="gender-btn" id="g-female" onclick="selectGender('female', this)">♀ Female</button>
+        <button class="gender-btn" id="g-other" onclick="selectGender('other', this)">⚧ Other</button>
+      </div>
+    </div>
+
+    <!-- Gender Preference -->
+    <div style="width:100%">
+      <span class="field-label">💬 Chat with</span>
+      <div class="gender-row">
+        <button class="gender-btn active" id="p-any" onclick="selectPref('any', this)">🌍 Anyone</button>
+        <button class="gender-btn" id="p-male" onclick="selectPref('male', this)">♂ Males</button>
+        <button class="gender-btn" id="p-female" onclick="selectPref('female', this)">♀ Females</button>
+      </div>
+    </div>
+
+    <!-- Manual Interests -->
+    <div style="width:100%">
+      <span class="field-label">🏷️ Interests — type and press Enter</span>
+      <div class="interest-input-wrap">
+        <div class="interest-tags-box" id="interest-tags-box"></div>
+        <input class="inp interest-inp" id="interest-inp" placeholder="e.g. Music, Gaming, Travel…" maxlength="30"
+          onkeydown="handleInterestKey(event)"/>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:5px;">Press Enter or comma to add · Click tag to remove</div>
     </div>
 
     <!-- Mode Buttons -->
@@ -1091,6 +1194,9 @@
       <button class="vbtn" id="vbtn-cam" onclick="toggleCam()">
         <span class="vicon">📹</span>Camera
       </button>
+      <button class="vbtn" id="vbtn-flip" onclick="flipCamera()" title="Flip Camera">
+        <span class="vicon">🔄</span>Flip
+      </button>
       <button class="vbtn vbtn-next" onclick="nextVideoStranger()">
         ⏭ Next
       </button>
@@ -1128,9 +1234,6 @@ const COUNTRIES = [
   {name:'United Kingdom',flag:'🇬🇧'},{name:'United States',flag:'🇺🇸'},{name:'Vietnam',flag:'🇻🇳'},
   {name:'Other',flag:'🌍'}
 ];
-
-const INTERESTS = ['Music','Gaming','Movies','Sports','Tech','Travel','Art','Food',
-  'Anime','Books','Fashion','Fitness','Science','Politics','Memes','Language'];
 
 const EMOJIS = ['😀','😂','😍','🥺','😎','🤔','😭','🔥','❤️','👍','👋','🎉',
   '😊','🥳','💀','🤣','😅','🙏','✨','💯','😏','🤯','😴','🤑',
@@ -1170,16 +1273,6 @@ let chatMode = 'text';
         .catch(() => setCountry('Unknown'));
     });
 
-  // Build interest tags
-  const container = document.getElementById('interest-tags');
-  INTERESTS.forEach(i => {
-    const tag = document.createElement('div');
-    tag.className = 'tag';
-    tag.textContent = i;
-    tag.onclick = () => toggleInterest(tag, i);
-    container.appendChild(tag);
-  });
-
   // Build emoji grid
   const grid = document.getElementById('emoji-grid');
   EMOJIS.forEach(e => {
@@ -1200,12 +1293,6 @@ function setCountry(countryName) {
   userFlag = found ? found.flag : '🌍';
   document.getElementById('user-flag').textContent = userFlag;
   document.getElementById('user-country').textContent = userCountry;
-}
-
-function toggleInterest(el, interest) {
-  el.classList.toggle('active');
-  if (el.classList.contains('active')) selectedInterests.push(interest);
-  else selectedInterests = selectedInterests.filter(i => i !== interest);
 }
 
 socket.on('connect', () => setStatus('Connected — ready to chat!', ''));
@@ -1295,7 +1382,9 @@ function startChat(mode = 'text') {
     username,
     country: userCountry,
     flag: userFlag,
-    interests: selectedInterests
+    interests: selectedInterests,
+    gender: selectedGender,
+    pref: selectedPref
   });
 
   if (mode === 'video') {
@@ -1491,6 +1580,117 @@ function playSound() {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
     o.start(); o.stop(ctx.currentTime + 0.4);
   } catch(e) {}
+}
+
+
+// ── GENDER ──
+let selectedGender = 'male';
+let selectedPref = 'any';
+
+function selectGender(g, el) {
+  selectedGender = g;
+  document.querySelectorAll('#g-male,#g-female,#g-other').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function selectPref(p, el) {
+  selectedPref = p;
+  document.querySelectorAll('#p-any,#p-male,#p-female').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── MANUAL INTERESTS ──
+function handleInterestKey(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = e.target.value.replace(/,/g, '').trim();
+    if (val && selectedInterests.length < 10 && !selectedInterests.includes(val)) {
+      addInterestChip(val);
+    }
+    e.target.value = '';
+  }
+  if (e.key === 'Backspace' && e.target.value === '' && selectedInterests.length > 0) {
+    removeInterestChip(selectedInterests[selectedInterests.length - 1]);
+  }
+}
+
+function addInterestChip(val) {
+  selectedInterests.push(val);
+  const box = document.getElementById('interest-tags-box');
+  const chip = document.createElement('div');
+  chip.className = 'interest-tag-chip';
+  chip.dataset.val = val;
+  chip.innerHTML = val + ' <span class="chip-x">✕</span>';
+  chip.onclick = () => removeInterestChip(val);
+  box.appendChild(chip);
+}
+
+function removeInterestChip(val) {
+  selectedInterests = selectedInterests.filter(i => i !== val);
+  const chip = document.querySelector(`.interest-tag-chip[data-val="${val}"]`);
+  if (chip) chip.remove();
+}
+
+// Focus input when clicking the box
+document.addEventListener('DOMContentLoaded', () => {
+  const wrap = document.querySelector('.interest-input-wrap');
+  if (wrap) wrap.onclick = () => document.getElementById('interest-inp').focus();
+});
+
+// ── SCREENSHOT BLOCK ──
+// Overlay when user tries to screenshot (best-effort)
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'PrintScreen') {
+    navigator.clipboard?.writeText('').catch(()=>{});
+    showToast('🚫 Screenshots are disabled for privacy', 'warn');
+  }
+});
+// Block right-click on video elements
+document.addEventListener('contextmenu', (e) => {
+  if (e.target.tagName === 'VIDEO') e.preventDefault();
+});
+
+// ── FLIP CAMERA (mobile) ──
+let currentFacingMode = 'user'; // front camera default
+
+async function flipCamera() {
+  if (!localStream) return;
+  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  const btn = document.getElementById('vbtn-flip');
+  btn.style.opacity = '0.5';
+
+  try {
+    // Stop current video track
+    localStream.getVideoTracks().forEach(t => t.stop());
+
+    // Get new stream with flipped camera
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacingMode },
+      audio: false
+    });
+
+    const newVideoTrack = newStream.getVideoTracks()[0];
+
+    // Replace track in peer connection
+    if (peerConnection) {
+      const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) await sender.replaceTrack(newVideoTrack);
+    }
+
+    // Replace in localStream
+    localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
+    localStream.addTrack(newVideoTrack);
+    document.getElementById('video-local').srcObject = localStream;
+
+    btn.innerHTML = '<span class="vicon">🔄</span>Flip';
+    btn.style.opacity = '1';
+    btn.classList.toggle('active');
+    setTimeout(() => btn.classList.remove('active'), 500);
+  } catch (err) {
+    showToast('⚠️ Could not flip camera — device may only have one camera', 'warn');
+    btn.style.opacity = '1';
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user'; // revert
+  }
 }
 
 // ════════════════════════════════════════

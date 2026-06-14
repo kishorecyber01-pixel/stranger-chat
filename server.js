@@ -120,6 +120,13 @@ function removeFromQueues(socketId) {
   }
 }
 
+function genderMatch(infoA, infoB) {
+  // Check if A's preference matches B's gender and vice versa
+  const aPrefOk = infoA.pref === 'any' || infoA.pref === infoB.gender || !infoB.gender;
+  const bPrefOk = infoB.pref === 'any' || infoB.pref === infoA.gender || !infoA.gender;
+  return aPrefOk && bPrefOk;
+}
+
 function tryMatch(interests) {
   const keys = interests.length > 0
     ? [...interests.map(i => i.toLowerCase()), 'any']
@@ -128,22 +135,27 @@ function tryMatch(interests) {
   for (const key of keys) {
     if (!waitingQueues[key]) waitingQueues[key] = [];
     const queue = waitingQueues[key];
-    if (queue.length >= 2) {
-      const a = queue.shift();
-      const b = queue.shift();
-      if (!io.sockets.sockets.get(a) || !io.sockets.sockets.get(b)) {
-        if (io.sockets.sockets.get(a)) queue.unshift(a);
-        if (io.sockets.sockets.get(b)) queue.unshift(b);
-        continue;
+
+    // Try to find a compatible gender pair in the queue
+    for (let i = 0; i < queue.length; i++) {
+      for (let j = i + 1; j < queue.length; j++) {
+        const a = queue[i];
+        const b = queue[j];
+        if (!io.sockets.sockets.get(a) || !io.sockets.sockets.get(b)) continue;
+        const infoA = userInfo.get(a) || {};
+        const infoB = userInfo.get(b) || {};
+        if (genderMatch(infoA, infoB)) {
+          // Remove from queue
+          queue.splice(j, 1);
+          queue.splice(i, 1);
+          pairs.set(a, b);
+          pairs.set(b, a);
+          io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b }, isInitiator: true });
+          io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a }, isInitiator: false });
+          broadcastStats();
+          return;
+        }
       }
-      pairs.set(a, b);
-      pairs.set(b, a);
-      const infoA = userInfo.get(a) || {};
-      const infoB = userInfo.get(b) || {};
-      io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b }, isInitiator: true });
-      io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a }, isInitiator: false });
-      broadcastStats();
-      return;
     }
   }
 }
