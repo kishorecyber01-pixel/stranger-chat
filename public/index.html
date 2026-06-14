@@ -352,6 +352,7 @@
     }
 
     /* ── TRANSLATION BADGE on message ── */
+    .msg-main { display: block; }
     .msg-translated {
       font-size: .6rem;
       color: rgba(255,255,255,0.4);
@@ -359,6 +360,7 @@
       font-style: italic;
     }
     .msg.them .msg-translated { color: var(--muted); }
+    .msg-translating { color: var(--accent3) !important; animation: pulse-dot 1.2s infinite; }
 
     /* ── MOD WARNING TOAST ── */
     .toast-warn {
@@ -965,6 +967,10 @@ socket.on('matched', ({ partner }) => {
 socket.on('message', async ({ text }) => {
   hideTyping();
   if (selectedLang) {
+    // Show message immediately with a translating indicator
+    const tempId = 'msg-' + Date.now();
+    addMsg(text, 'them', null, tempId);
+    setTranslateStatus('⏳');
     try {
       const res = await fetch('/translate', {
         method: 'POST',
@@ -973,13 +979,13 @@ socket.on('message', async ({ text }) => {
       });
       const data = await res.json();
       const translated = data.translatedText || text;
-      if (translated && translated !== text) {
-        addMsg(text, 'them', translated); // show original + translated
-      } else {
-        addMsg(text, 'them');
+      setTranslateStatus('✓ On');
+      if (translated && translated.toLowerCase() !== text.toLowerCase()) {
+        // Update the existing message bubble with translation
+        updateMsgTranslation(tempId, translated);
       }
     } catch {
-      addMsg(text, 'them'); // fallback on error
+      setTranslateStatus('✓ On');
     }
   } else {
     addMsg(text, 'them');
@@ -1099,20 +1105,32 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-function addMsg(text, type, translated = null) {
+function addMsg(text, type, translated = null, msgId = null) {
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   div.className = `msg ${type}`;
+  if (msgId) div.dataset.msgid = msgId;
+
+  // Main text node (will be updated with translation)
+  const mainText = document.createElement('span');
+  mainText.className = 'msg-main';
+  mainText.innerHTML = escHtml(translated || text);
+  div.appendChild(mainText);
+
+  // Original text (shown small below when translated)
   if (translated) {
-    // Show translated text prominently, original underneath small
-    div.innerHTML = escHtml(translated);
     const orig = document.createElement('div');
     orig.className = 'msg-translated';
     orig.textContent = '(' + text + ')';
     div.appendChild(orig);
-  } else {
-    div.innerHTML = escHtml(text);
+  } else if (type === 'them' && selectedLang) {
+    // Placeholder while translating
+    const orig = document.createElement('div');
+    orig.className = 'msg-translated msg-translating';
+    orig.textContent = 'Translating…';
+    div.appendChild(orig);
   }
+
   if (type !== 'system') {
     const t = document.createElement('div');
     t.className = 'msg-time';
@@ -1122,6 +1140,23 @@ function addMsg(text, type, translated = null) {
   const chatBox = document.getElementById('chat-box');
   chatBox.insertBefore(div, document.getElementById('typing-indicator'));
   chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function updateMsgTranslation(msgId, translated) {
+  const div = document.querySelector(`[data-msgid="${msgId}"]`);
+  if (!div) return;
+  const original = div.querySelector('.msg-main').textContent;
+  div.querySelector('.msg-main').innerHTML = escHtml(translated);
+  const sub = div.querySelector('.msg-translated');
+  if (sub) {
+    sub.classList.remove('msg-translating');
+    sub.textContent = '(' + original + ')';
+  }
+}
+
+function setTranslateStatus(text) {
+  const el = document.getElementById('translate-status');
+  if (el) el.textContent = text;
 }
 
 function escHtml(t) {

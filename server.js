@@ -50,23 +50,26 @@ app.post('/verify-turnstile', async (req, res) => {
   }
 });
 
-// ── TRANSLATION ROUTE (LibreTranslate) ──
+// ── TRANSLATION ROUTE (MyMemory — free, no key needed) ──
 app.post('/translate', async (req, res) => {
   try {
     const { text, targetLang } = req.body;
-    if (!text || !targetLang || targetLang === 'en') {
+    if (!text || !targetLang) {
       return res.json({ translatedText: text });
     }
-    const response = await axios.post('https://libretranslate.com/translate', {
-      q: text,
-      source: 'auto',
-      target: targetLang,
-      format: 'text',
-      api_key: process.env.LIBRETRANSLATE_KEY || ''
-    }, { headers: { 'Content-Type': 'application/json' } });
-    res.json({ translatedText: response.data.translatedText || text });
+    // MyMemory API: free, no key, auto-detects source language
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`;
+    const response = await axios.get(url, { timeout: 5000 });
+    const translated = response.data?.responseData?.translatedText;
+    // MyMemory returns original if it can't translate
+    if (translated && translated.toLowerCase() !== text.toLowerCase()) {
+      res.json({ translatedText: translated });
+    } else {
+      res.json({ translatedText: text });
+    }
   } catch (err) {
-    res.json({ translatedText: req.body.text }); // fallback: return original
+    console.error('[TRANSLATE ERROR]', err.message);
+    res.json({ translatedText: req.body.text });
   }
 });
 
