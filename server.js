@@ -21,6 +21,27 @@ app.use(session({
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
+// ── IP BAN LIST (persistent in memory, swap to DB/Redis for production) ──
+const bannedIPs = new Set();
+
+function getClientIP(req) {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.headers['x-real-ip'] ||
+    req.socket.remoteAddress ||
+    '0.0.0.0'
+  );
+}
+
+// Middleware: block banned IPs from web requests
+app.use((req, res, next) => {
+  const ip = getClientIP(req);
+  if (bannedIPs.has(ip)) {
+    return res.status(403).sendFile(path.join(__dirname, 'public', 'banned.html'));
+  }
+  next();
+});
+
 // Serve captcha gate for first-time visitors
 app.get('/', (req, res) => {
   if (req.session.verified) {
@@ -35,6 +56,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── TURNSTILE VERIFY ──
 app.post('/verify-turnstile', async (req, res) => {
   try {
+    const ip = getClientIP(req);
+    if (bannedIPs.has(ip)) return res.status(403).json({ success: false, error: 'banned' });
+
     const token = req.body.token;
     const response = await axios.post(
       'https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -50,25 +74,46 @@ app.post('/verify-turnstile', async (req, res) => {
   }
 });
 
-// ── TRANSLATION ROUTE (MyMemory — free, no key needed) ──
+// ── PREMIUM CHECK ──
+// In production replace with real payment/DB lookup
+app.get('/api/premium-status', (req, res) => {
+  const isPremium = req.session.premium === true;
+  res.json({ premium: isPremium });
+});
+
+// ── FAKE PREMIUM UPGRADE (replace with Stripe etc.) ──
+app.post('/api/upgrade', (req, res) => {
+  // TODO: integrate real payment. For now just a stub.
+  res.json({ success: false, message: 'Payment integration required' });
+});
+
+// ── AVATAR UPLOAD (base64 stored in session, max 200KB) ──
+app.post('/api/avatar', (req, res) => {
+  const { dataUrl } = req.body;
+  if (!dataUrl || dataUrl.length > 300000) {
+    return res.json({ success: false, error: 'Image too large (max ~200KB)' });
+  }
+  req.session.avatar = dataUrl;
+  req.session.save();
+  res.json({ success: true });
+});
+
+app.get('/api/avatar', (req, res) => {
+  res.json({ avatar: req.session.avatar || null });
+});
+
+// ── TRANSLATION ROUTE ──
 app.post('/translate', async (req, res) => {
   try {
     const { text, targetLang, sourceLang = 'en' } = req.body;
-    if (!text || !targetLang) {
-      return res.json({ translatedText: text });
-    }
-    // MyMemory requires explicit source|target — 'auto' is NOT supported
-    // We use 'en' as default source; if same as target just return original
-    if (sourceLang === targetLang) {
-      return res.json({ translatedText: text });
-    }
+    if (!text || !targetLang) return res.json({ translatedText: text });
+    if (sourceLang === targetLang) return res.json({ translatedText: text });
     const langpair = `${sourceLang}|${targetLang}`;
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`;
     const response = await axios.get(url, { timeout: 6000 });
     const result = response.data?.responseData;
     const translated = result?.translatedText;
     const match = result?.match ?? 0;
-    // Only use translation if confidence is reasonable and it's different
     if (translated && match > 0 && translated.toLowerCase() !== text.toLowerCase()) {
       res.json({ translatedText: translated });
     } else {
@@ -80,31 +125,70 @@ app.post('/translate', async (req, res) => {
   }
 });
 
-// ── AI MODERATION ROUTE ──
-// Uses a simple keyword + pattern approach (no paid API needed)
-// You can swap this for OpenAI moderation API if you want later
+// ── SMART AI MODERATION ──
+// Expanded keyword patterns + smart context checks
 const BAD_PATTERNS = [
   /\b(nigger|nigga|faggot|retard|chink|spic|kike|cunt)\b/i,
   /\b(kill\s+your?self|kys|go\s+die|i\s+will\s+kill\s+you)\b/i,
   /\b(fuck\s+you|fuck\s+off|motherfucker|piece\s+of\s+shit)\b/i,
-  /(rape|molest|pedophile|child\s+porn|cp\s+link)/i,
-  /(\b\d{3}[-.]?\d{3}[-.]?\d{4}\b)/,        // phone numbers
-  /(https?:\/\/[^\s]+\.(onion|to\/cp))/i,    // suspicious links
+  /(rape|molest|pedophile|child\s+porn|\bcp\b\s*(link|video|pic))/i,
+  /\b(sex|nude|naked|dick|cock|pussy|boobs|tits)\b.{0,20}\b(send|share|show|pic|photo|video)\b/i,
+  /(\b\d{3}[-.]?\d{3}[-.]?\d{4}\b)/,
+  /(https?:\/\/[^\s]+\.(onion))/i,
+  /\b(whatsapp|snapchat|telegram|instagram|discord)\s*(is|id|number|@|:)?\s*[\w.@]+/i,
+  /\b(asl|age sex location|how old are you).{0,10}(female|girl|boy|male|f\/|m\/)/i,
+  /\b(wanna\s+fuck|let'?s\s+fuck|want\s+to\s+have\s+sex)\b/i,
 ];
 
+// Contextual severity scoring — returns { blocked: bool, severity: 'low'|'high', reason: string }
 function moderateMessage(text) {
   for (const pattern of BAD_PATTERNS) {
-    if (pattern.test(text)) return true;
+    if (pattern.test(text)) {
+      // Hate speech or threats = high severity (instant ban)
+      const highSeverity = [BAD_PATTERNS[0], BAD_PATTERNS[1]];
+      const severity = highSeverity.includes(pattern) ? 'high' : 'low';
+      return { blocked: true, severity, reason: 'policy_violation' };
+    }
   }
-  return false;
+  return { blocked: false };
+}
+
+// ── SPAM DETECTION ──
+// Blocks if user sends same message 3+ times in a row or 5+ identical in a session
+function createSpamTracker() {
+  return {
+    lastMessage: '',
+    repeatCount: 0,
+    sessionCounts: new Map(),
+    check(text) {
+      const normalized = text.trim().toLowerCase();
+      // Repeated consecutive messages
+      if (normalized === this.lastMessage) {
+        this.repeatCount++;
+      } else {
+        this.lastMessage = normalized;
+        this.repeatCount = 1;
+      }
+      // Session frequency
+      const freq = (this.sessionCounts.get(normalized) || 0) + 1;
+      this.sessionCounts.set(normalized, freq);
+      if (this.repeatCount >= 3 || freq >= 5) {
+        return { spam: true, reason: this.repeatCount >= 3 ? 'repeat' : 'flood' };
+      }
+      return { spam: false };
+    }
+  };
 }
 
 // ── STATE ──
 const waitingQueues = {};
 const pairs = new Map();
 const userInfo = new Map();
-const reports = new Map();
-const warnings = new Map(); // track warnings per socket
+const reports = new Map();   // socketId -> report count
+const ipReports = new Map(); // ip -> report count (for IP banning)
+const warnings = new Map();
+const spamTrackers = new Map();
+const socketIPs = new Map(); // socketId -> ip
 
 function getTotalUsers() { return io.sockets.sockets.size; }
 function getTotalWaiting() {
@@ -121,7 +205,6 @@ function removeFromQueues(socketId) {
 }
 
 function genderMatch(infoA, infoB) {
-  // Check if A's preference matches B's gender and vice versa
   const aPrefOk = infoA.pref === 'any' || infoA.pref === infoB.gender || !infoB.gender;
   const bPrefOk = infoB.pref === 'any' || infoB.pref === infoA.gender || !infoA.gender;
   return aPrefOk && bPrefOk;
@@ -136,7 +219,6 @@ function tryMatch(interests) {
     if (!waitingQueues[key]) waitingQueues[key] = [];
     const queue = waitingQueues[key];
 
-    // Try to find a compatible gender pair in the queue
     for (let i = 0; i < queue.length; i++) {
       for (let j = i + 1; j < queue.length; j++) {
         const a = queue[i];
@@ -145,13 +227,12 @@ function tryMatch(interests) {
         const infoA = userInfo.get(a) || {};
         const infoB = userInfo.get(b) || {};
         if (genderMatch(infoA, infoB)) {
-          // Remove from queue
           queue.splice(j, 1);
           queue.splice(i, 1);
           pairs.set(a, b);
           pairs.set(b, a);
-          io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b }, isInitiator: true });
-          io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a }, isInitiator: false });
+          io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b, avatar: infoB.avatar || null }, isInitiator: true });
+          io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a, avatar: infoA.avatar || null }, isInitiator: false });
           broadcastStats();
           return;
         }
@@ -162,11 +243,25 @@ function tryMatch(interests) {
 
 // ── SOCKET EVENTS ──
 io.on('connection', (socket) => {
+  // Grab IP for this socket
+  const ip = socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || socket.handshake.address
+    || '0.0.0.0';
+  socketIPs.set(socket.id, ip);
+
+  // Block banned IPs at socket level
+  if (bannedIPs.has(ip)) {
+    socket.emit('ipBanned');
+    socket.disconnect();
+    return;
+  }
+
   broadcastStats();
   warnings.set(socket.id, 0);
+  spamTrackers.set(socket.id, createSpamTracker());
 
   socket.on('setInfo', (info) => {
-    userInfo.set(socket.id, info);
+    userInfo.set(socket.id, { ...info, ip });
   });
 
   socket.on('findStranger', ({ interests = [] } = {}) => {
@@ -198,36 +293,49 @@ io.on('connection', (socket) => {
     const partnerId = pairs.get(socket.id);
     if (!partnerId) return;
 
-    const text = data.text || '';
+    const text = (data.text || '').substring(0, 2000); // cap length
 
-    // ── AI MODERATION CHECK ──
-    if (moderateMessage(text)) {
+    // ── SPAM CHECK ──
+    const spamTracker = spamTrackers.get(socket.id);
+    if (spamTracker) {
+      const spam = spamTracker.check(text);
+      if (spam.spam) {
+        socket.emit('modWarning', {
+          message: spam.reason === 'repeat'
+            ? '⚠️ Please don\'t send the same message repeatedly.'
+            : '⚠️ You\'re sending too fast — slow down!'
+        });
+        console.log(`[SPAM] ${socket.id}: ${spam.reason}`);
+        return;
+      }
+    }
+
+    // ── MODERATION CHECK ──
+    const mod = moderateMessage(text);
+    if (mod.blocked) {
       const warnCount = (warnings.get(socket.id) || 0) + 1;
       warnings.set(socket.id, warnCount);
 
-      if (warnCount === 1) {
-        // First offence: warn the sender, don't deliver message
-        socket.emit('modWarning', {
-          message: '⚠️ Your message was blocked. Sending harmful content will result in disconnection.'
-        });
-        console.log(`[MOD] Warning #${warnCount} to ${socket.id}: "${text.substring(0, 50)}"`);
-      } else {
-        // Second offence: disconnect
+      if (mod.severity === 'high' || warnCount >= 2) {
+        // Instant or second-offence ban
         socket.emit('modBanned', {
           message: '🚫 You have been removed for violating community rules.'
         });
-        console.log(`[MOD] Banned ${socket.id} after ${warnCount} violations`);
-        // Notify partner
+        console.log(`[MOD] Banned ${socket.id} — severity: ${mod.severity}, warnings: ${warnCount}`);
         pairs.delete(partnerId);
         pairs.delete(socket.id);
         io.to(partnerId).emit('strangerLeft');
         removeFromQueues(socket.id);
         setTimeout(() => socket.disconnect(), 500);
+      } else {
+        socket.emit('modWarning', {
+          message: '⚠️ Your message was blocked. One more violation and you will be disconnected.'
+        });
+        console.log(`[MOD] Warning #${warnCount} to ${socket.id}: "${text.substring(0, 50)}"`);
       }
-      return; // don't deliver the message
+      return;
     }
 
-    // Deliver message normally (translation happens on client side)
     io.to(partnerId).emit('message', { text });
   });
 
@@ -239,11 +347,28 @@ io.on('connection', (socket) => {
   socket.on('report', () => {
     const partnerId = pairs.get(socket.id);
     if (partnerId) {
-      const count = (reports.get(partnerId) || 0) + 1;
-      reports.set(partnerId, count);
+      // Per-socket report count
+      const socketCount = (reports.get(partnerId) || 0) + 1;
+      reports.set(partnerId, socketCount);
+
+      // Per-IP report count (for permanent banning)
+      const partnerIP = socketIPs.get(partnerId) || '0.0.0.0';
+      const ipCount = (ipReports.get(partnerIP) || 0) + 1;
+      ipReports.set(partnerIP, ipCount);
+
       socket.emit('reported');
-      if (count >= 3) {
+      console.log(`[REPORT] ${partnerId} (IP ${partnerIP}) has ${socketCount} socket reports, ${ipCount} IP reports`);
+
+      if (socketCount >= 3) {
         io.to(partnerId).emit('banned');
+        io.sockets.sockets.get(partnerId)?.disconnect();
+      }
+
+      // Permanently ban IP after 3+ cross-session IP reports
+      if (ipCount >= 3) {
+        bannedIPs.add(partnerIP);
+        io.to(partnerId).emit('ipBanned');
+        console.log(`[BAN] IP permanently banned: ${partnerIP}`);
         io.sockets.sockets.get(partnerId)?.disconnect();
       }
     }
@@ -287,6 +412,8 @@ io.on('connection', (socket) => {
     removeFromQueues(socket.id);
     userInfo.delete(socket.id);
     warnings.delete(socket.id);
+    spamTrackers.delete(socket.id);
+    socketIPs.delete(socket.id);
     broadcastStats();
   });
 });
