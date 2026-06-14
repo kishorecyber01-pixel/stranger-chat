@@ -922,12 +922,12 @@
 
     <!-- Mode Buttons -->
     <div class="mode-btns">
-      <button class="btn-mode btn-mode-text" onclick="startChat('text')">
+      <button class="btn-mode btn-mode-text" onclick="validateAndStart('text')">
         <span class="mode-icon">💬</span>
         <span class="mode-label">Text Chat</span>
         <span class="mode-sub">Anonymous messaging</span>
       </button>
-      <button class="btn-mode btn-mode-video" onclick="startChat('video')">
+      <button class="btn-mode btn-mode-video" onclick="validateAndStart('video')">
         <span class="mode-icon">📹</span>
         <span class="mode-label">Video Chat</span>
         <span class="mode-sub">Face-to-face strangers</span>
@@ -1264,6 +1264,28 @@ function onLangChange(val) {
   } else {
     status.textContent = '';
   }
+}
+
+function validateAndStart(mode) {
+  const username = document.getElementById('inp-username').value.trim();
+
+  // Name is required
+  if (!username) {
+    const inp = document.getElementById('inp-username');
+    inp.focus();
+    inp.style.borderColor = 'var(--red)';
+    inp.style.boxShadow = '0 0 0 3px rgba(244,63,94,0.2)';
+    inp.placeholder = 'Please enter a nickname first!';
+    setTimeout(() => {
+      inp.style.borderColor = '';
+      inp.style.boxShadow = '';
+      inp.placeholder = 'e.g. CoolDude99';
+    }, 2500);
+    showToast('⚠️ Please enter a nickname first!', 'warn');
+    return;
+  }
+
+  startChat(mode);
 }
 
 function startChat(mode = 'text') {
