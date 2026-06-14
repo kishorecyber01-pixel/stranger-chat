@@ -10,6 +10,21 @@
   </script>
 
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <script>
+    // Must be global before Turnstile fires
+    var captchaToken = null;
+    function onCaptchaSuccess(token) {
+      captchaToken = token;
+      var captchaScreen = document.getElementById('screen-captcha');
+      captchaScreen.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      captchaScreen.style.opacity = '0';
+      captchaScreen.style.transform = 'scale(0.97)';
+      setTimeout(function() {
+        document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+        document.getElementById('screen-landing').classList.add('active');
+      }, 320);
+    }
+  </script>
 
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
@@ -877,34 +892,15 @@ let selectedInterests = [];
 let isDark = true;
 let userCountry = 'Unknown';
 let userFlag = '🌍';
-let captchaToken = null; // stored after gate verification
+// captchaToken is declared globally in <head>
 
-async function onCaptchaSuccess(token) {
+function onCaptchaSuccess(token) {
   captchaToken = token;
-  // Verify with server
-  try {
-    const res = await fetch('/verify-turnstile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    const data = await res.json();
-    if (data.success) {
-      // Animate transition to landing
-      const captchaScreen = document.getElementById('screen-captcha');
-      captchaScreen.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      captchaScreen.style.opacity = '0';
-      captchaScreen.style.transform = 'scale(0.97)';
-      setTimeout(() => showScreen('screen-landing'), 300);
-    } else {
-      // Reset turnstile on fail
-      captchaToken = null;
-      if (window.turnstile) window.turnstile.reset();
-    }
-  } catch (err) {
-    captchaToken = null;
-    if (window.turnstile) window.turnstile.reset();
-  }
+  const captchaScreen = document.getElementById('screen-captcha');
+  captchaScreen.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+  captchaScreen.style.opacity = '0';
+  captchaScreen.style.transform = 'scale(0.97)';
+  setTimeout(() => showScreen('screen-landing'), 320);
 }
 
 (function init() {
