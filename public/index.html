@@ -313,8 +313,46 @@
     }
     .tag:hover:not(.active) { border-color: var(--accent2); color: var(--text); }
 
-    /* ── TURNSTILE ── */
-    .cf-turnstile { border-radius: 10px; overflow: hidden; width: 100%; }
+
+    /* ── LANGUAGE PICKER ── */
+    .lang-select {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--ff);
+      font-size: .85rem;
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b8a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .lang-select:focus {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+    }
+
+    /* ── TRANSLATION BADGE on message ── */
+    .msg-translated {
+      font-size: .6rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 3px;
+      font-style: italic;
+    }
+    .msg.them .msg-translated { color: var(--muted); }
+
+    /* ── MOD WARNING TOAST ── */
+    .toast-warn {
+      background: rgba(244,63,94,0.15);
+      border-color: rgba(244,63,94,0.4);
+      color: #f43f5e;
+    }
 
     /* ── START BUTTON ── */
     .btn-start {
@@ -678,7 +716,35 @@
       <div class="interest-wrap" id="interest-tags"></div>
     </div>
 
-    <!-- Start Button -->
+    <!-- Language Picker -->
+    <div style="width:100%">
+      <span class="field-label">🌐 Translate messages to</span>
+      <select class="lang-select" id="lang-select">
+        <option value="">No translation (original language)</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="ta">🇮🇳 Tamil</option>
+        <option value="hi">🇮🇳 Hindi</option>
+        <option value="es">🇪🇸 Spanish</option>
+        <option value="fr">🇫🇷 French</option>
+        <option value="de">🇩🇪 German</option>
+        <option value="it">🇮🇹 Italian</option>
+        <option value="pt">🇧🇷 Portuguese</option>
+        <option value="ru">🇷🇺 Russian</option>
+        <option value="zh">🇨🇳 Chinese</option>
+        <option value="ja">🇯🇵 Japanese</option>
+        <option value="ko">🇰🇷 Korean</option>
+        <option value="ar">🇸🇦 Arabic</option>
+        <option value="tr">🇹🇷 Turkish</option>
+        <option value="nl">🇳🇱 Dutch</option>
+        <option value="pl">🇵🇱 Polish</option>
+        <option value="id">🇮🇩 Indonesian</option>
+        <option value="vi">🇻🇳 Vietnamese</option>
+        <option value="th">🇹🇭 Thai</option>
+        <option value="uk">🇺🇦 Ukrainian</option>
+      </select>
+    </div>
+
+        <!-- Start Button -->
     <button class="btn-start" onclick="startChat()">
       Start Chatting →
     </button>
@@ -795,6 +861,7 @@ let selectedInterests = [];
 let isDark = true;
 let userCountry = 'Unknown';
 let userFlag = '🌍';
+let selectedLang = '';
 
 (function init() {
   // ── COUNTRY DETECTION ──
@@ -882,9 +949,28 @@ socket.on('matched', ({ partner }) => {
   playSound();
 });
 
-socket.on('message', ({ text }) => {
+socket.on('message', async ({ text }) => {
   hideTyping();
-  addMsg(text, 'them');
+  if (selectedLang) {
+    try {
+      const res = await fetch('/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang: selectedLang })
+      });
+      const data = await res.json();
+      const translated = data.translatedText || text;
+      if (translated && translated !== text) {
+        addMsg(text, 'them', translated); // show original + translated
+      } else {
+        addMsg(text, 'them');
+      }
+    } catch {
+      addMsg(text, 'them'); // fallback on error
+    }
+  } else {
+    addMsg(text, 'them');
+  }
 });
 
 socket.on('typing', isTyping => isTyping ? showTyping() : hideTyping());
@@ -908,7 +994,23 @@ socket.on('idle', () => {
 socket.on('reported', () => showToast('⚠️ Stranger reported. Finding you a new chat…'));
 socket.on('banned', () => showToast('🚫 You have been banned for violations.'));
 
+socket.on('modWarning', ({ message }) => {
+  showToast(message, 'warn');
+});
+
+socket.on('modBanned', ({ message }) => {
+  showToast(message, 'warn');
+  setTimeout(() => {
+    state = 'idle';
+    enableInput(false);
+    hidePartnerBar();
+    clearChat();
+    showScreen('screen-landing');
+  }, 2500);
+});
+
 function startChat() {
+  selectedLang = document.getElementById('lang-select').value;
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
   socket.emit('setInfo', {
     username,
@@ -975,11 +1077,20 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-function addMsg(text, type) {
+function addMsg(text, type, translated = null) {
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   div.className = `msg ${type}`;
-  div.innerHTML = escHtml(text);
+  if (translated) {
+    // Show translated text prominently, original underneath small
+    div.innerHTML = escHtml(translated);
+    const orig = document.createElement('div');
+    orig.className = 'msg-translated';
+    orig.textContent = '(' + text + ')';
+    div.appendChild(orig);
+  } else {
+    div.innerHTML = escHtml(text);
+  }
   if (type !== 'system') {
     const t = document.createElement('div');
     t.className = 'msg-time';
@@ -1048,11 +1159,12 @@ function insertEmoji(e) {
   closeEmoji();
 }
 
-function showToast(msg) {
+function showToast(msg, style = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  t.className = 'toast show' + (style === 'warn' ? ' toast-warn' : '');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 4000);
 }
 
 function playSound() {

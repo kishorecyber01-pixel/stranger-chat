@@ -18,7 +18,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'strangerchat-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+  cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 // Serve captcha gate for first-time visitors
@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── TURNSTILE VERIFY ROUTE ──
+// ── TURNSTILE VERIFY ──
 app.post('/verify-turnstile', async (req, res) => {
   try {
     const token = req.body.token;
@@ -43,20 +43,58 @@ app.post('/verify-turnstile', async (req, res) => {
         response: token
       })
     );
-    if (response.data.success) {
-      req.session.verified = true;
-    }
+    if (response.data.success) req.session.verified = true;
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false });
   }
 });
 
+// ── TRANSLATION ROUTE (LibreTranslate) ──
+app.post('/translate', async (req, res) => {
+  try {
+    const { text, targetLang } = req.body;
+    if (!text || !targetLang || targetLang === 'en') {
+      return res.json({ translatedText: text });
+    }
+    const response = await axios.post('https://libretranslate.com/translate', {
+      q: text,
+      source: 'auto',
+      target: targetLang,
+      format: 'text',
+      api_key: process.env.LIBRETRANSLATE_KEY || ''
+    }, { headers: { 'Content-Type': 'application/json' } });
+    res.json({ translatedText: response.data.translatedText || text });
+  } catch (err) {
+    res.json({ translatedText: req.body.text }); // fallback: return original
+  }
+});
+
+// ── AI MODERATION ROUTE ──
+// Uses a simple keyword + pattern approach (no paid API needed)
+// You can swap this for OpenAI moderation API if you want later
+const BAD_PATTERNS = [
+  /\b(nigger|nigga|faggot|retard|chink|spic|kike|cunt)\b/i,
+  /\b(kill\s+your?self|kys|go\s+die|i\s+will\s+kill\s+you)\b/i,
+  /\b(fuck\s+you|fuck\s+off|motherfucker|piece\s+of\s+shit)\b/i,
+  /(rape|molest|pedophile|child\s+porn|cp\s+link)/i,
+  /(\b\d{3}[-.]?\d{3}[-.]?\d{4}\b)/,        // phone numbers
+  /(https?:\/\/[^\s]+\.(onion|to\/cp))/i,    // suspicious links
+];
+
+function moderateMessage(text) {
+  for (const pattern of BAD_PATTERNS) {
+    if (pattern.test(text)) return true;
+  }
+  return false;
+}
+
 // ── STATE ──
 const waitingQueues = {};
 const pairs = new Map();
 const userInfo = new Map();
 const reports = new Map();
+const warnings = new Map(); // track warnings per socket
 
 function getTotalUsers() { return io.sockets.sockets.size; }
 function getTotalWaiting() {
@@ -103,6 +141,7 @@ function tryMatch(interests) {
 // ── SOCKET EVENTS ──
 io.on('connection', (socket) => {
   broadcastStats();
+  warnings.set(socket.id, 0);
 
   socket.on('setInfo', (info) => {
     userInfo.set(socket.id, info);
@@ -135,7 +174,39 @@ io.on('connection', (socket) => {
 
   socket.on('message', (data) => {
     const partnerId = pairs.get(socket.id);
-    if (partnerId) io.to(partnerId).emit('message', { text: data.text });
+    if (!partnerId) return;
+
+    const text = data.text || '';
+
+    // ── AI MODERATION CHECK ──
+    if (moderateMessage(text)) {
+      const warnCount = (warnings.get(socket.id) || 0) + 1;
+      warnings.set(socket.id, warnCount);
+
+      if (warnCount === 1) {
+        // First offence: warn the sender, don't deliver message
+        socket.emit('modWarning', {
+          message: '⚠️ Your message was blocked. Sending harmful content will result in disconnection.'
+        });
+        console.log(`[MOD] Warning #${warnCount} to ${socket.id}: "${text.substring(0, 50)}"`);
+      } else {
+        // Second offence: disconnect
+        socket.emit('modBanned', {
+          message: '🚫 You have been removed for violating community rules.'
+        });
+        console.log(`[MOD] Banned ${socket.id} after ${warnCount} violations`);
+        // Notify partner
+        pairs.delete(partnerId);
+        pairs.delete(socket.id);
+        io.to(partnerId).emit('strangerLeft');
+        removeFromQueues(socket.id);
+        setTimeout(() => socket.disconnect(), 500);
+      }
+      return; // don't deliver the message
+    }
+
+    // Deliver message normally (translation happens on client side)
+    io.to(partnerId).emit('message', { text });
   });
 
   socket.on('typing', (isTyping) => {
@@ -177,6 +248,7 @@ io.on('connection', (socket) => {
     }
     removeFromQueues(socket.id);
     userInfo.delete(socket.id);
+    warnings.delete(socket.id);
     broadcastStats();
   });
 });
