@@ -314,28 +314,41 @@
     .tag:hover:not(.active) { border-color: var(--accent2); color: var(--text); }
 
 
-    /* ── LANGUAGE PICKER ── */
-    .lang-select {
-      background: var(--surface);
+    /* ── TRANSLATE BAR (in chat) ── */
+    .translate-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      padding: 6px 10px;
+      background: var(--card);
       border: 1px solid var(--border2);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: var(--ff);
-      font-size: .85rem;
-      outline: none;
-      width: 100%;
-      cursor: pointer;
-      transition: border-color .2s, box-shadow .2s;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b8a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 36px;
     }
-    .lang-select:focus {
-      border-color: var(--accent2);
-      box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+    .translate-label {
+      font-size: .9rem;
+      flex-shrink: 0;
+    }
+    .lang-select-chat {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted2);
+      font-family: var(--ff);
+      font-size: .78rem;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      min-width: 0;
+    }
+    .lang-select-chat option { background: var(--card2); color: var(--text); }
+    .translate-status {
+      font-size: .68rem;
+      color: var(--accent3);
+      flex-shrink: 0;
+      min-width: 60px;
+      text-align: right;
+      font-family: var(--ff);
     }
 
     /* ── TRANSLATION BADGE on message ── */
@@ -716,35 +729,7 @@
       <div class="interest-wrap" id="interest-tags"></div>
     </div>
 
-    <!-- Language Picker -->
-    <div style="width:100%">
-      <span class="field-label">🌐 Translate messages to</span>
-      <select class="lang-select" id="lang-select">
-        <option value="">No translation (original language)</option>
-        <option value="en">🇬🇧 English</option>
-        <option value="ta">🇮🇳 Tamil</option>
-        <option value="hi">🇮🇳 Hindi</option>
-        <option value="es">🇪🇸 Spanish</option>
-        <option value="fr">🇫🇷 French</option>
-        <option value="de">🇩🇪 German</option>
-        <option value="it">🇮🇹 Italian</option>
-        <option value="pt">🇧🇷 Portuguese</option>
-        <option value="ru">🇷🇺 Russian</option>
-        <option value="zh">🇨🇳 Chinese</option>
-        <option value="ja">🇯🇵 Japanese</option>
-        <option value="ko">🇰🇷 Korean</option>
-        <option value="ar">🇸🇦 Arabic</option>
-        <option value="tr">🇹🇷 Turkish</option>
-        <option value="nl">🇳🇱 Dutch</option>
-        <option value="pl">🇵🇱 Polish</option>
-        <option value="id">🇮🇩 Indonesian</option>
-        <option value="vi">🇻🇳 Vietnamese</option>
-        <option value="th">🇹🇭 Thai</option>
-        <option value="uk">🇺🇦 Ukrainian</option>
-      </select>
-    </div>
-
-        <!-- Start Button -->
+    <!-- Start Button -->
     <button class="btn-start" onclick="startChat()">
       Start Chatting →
     </button>
@@ -799,6 +784,34 @@
       <button class="btn btn-icon" onclick="nextStranger()">⏭ Next</button>
       <button class="btn btn-danger" onclick="stopChat()">✕ Stop</button>
       <button class="btn btn-danger" id="btn-report" onclick="reportStranger()" disabled style="margin-left:auto">🚩 Report</button>
+    </div>
+    <!-- Translate bar -->
+    <div class="translate-bar">
+      <span class="translate-label">🌐</span>
+      <select class="lang-select-chat" id="lang-select" onchange="onLangChange(this.value)">
+        <option value="">No translation</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="ta">🇮🇳 Tamil</option>
+        <option value="hi">🇮🇳 Hindi</option>
+        <option value="es">🇪🇸 Spanish</option>
+        <option value="fr">🇫🇷 French</option>
+        <option value="de">🇩🇪 German</option>
+        <option value="it">🇮🇹 Italian</option>
+        <option value="pt">🇧🇷 Portuguese</option>
+        <option value="ru">🇷🇺 Russian</option>
+        <option value="zh">🇨🇳 Chinese</option>
+        <option value="ja">🇯🇵 Japanese</option>
+        <option value="ko">🇰🇷 Korean</option>
+        <option value="ar">🇸🇦 Arabic</option>
+        <option value="tr">🇹🇷 Turkish</option>
+        <option value="nl">🇳🇱 Dutch</option>
+        <option value="pl">🇵🇱 Polish</option>
+        <option value="id">🇮🇩 Indonesian</option>
+        <option value="vi">🇻🇳 Vietnamese</option>
+        <option value="th">🇹🇭 Thai</option>
+        <option value="uk">🇺🇦 Ukrainian</option>
+      </select>
+      <span class="translate-status" id="translate-status"></span>
     </div>
     <div class="input-row">
       <textarea class="inp" id="msg-input" placeholder="Type a message…" rows="1" disabled
@@ -1009,8 +1022,17 @@ socket.on('modBanned', ({ message }) => {
   }, 2500);
 });
 
+function onLangChange(val) {
+  selectedLang = val;
+  const status = document.getElementById('translate-status');
+  if (val) {
+    status.textContent = '✓ On';
+  } else {
+    status.textContent = '';
+  }
+}
+
 function startChat() {
-  selectedLang = document.getElementById('lang-select').value;
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
   socket.emit('setInfo', {
     username,
