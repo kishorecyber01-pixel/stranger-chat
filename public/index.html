@@ -873,105 +873,6 @@
       box-shadow: 0 0 12px rgba(168,85,247,0.15);
     }
 
-    /* ── PREMIUM BADGE ── */
-    .premium-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24);
-      color: #1a1000; font-family: var(--ff); font-size: .68rem; font-weight: 800;
-      border-radius: 20px; padding: 3px 10px; letter-spacing: .03em;
-      box-shadow: 0 2px 10px rgba(251,191,36,0.4);
-    }
-
-    /* ── LOCK OVERLAY on gender pref ── */
-    .pref-lock-wrap { position: relative; width: 100%; }
-    .pref-lock-overlay {
-      position: absolute; inset: 0; border-radius: var(--radius-sm);
-      background: rgba(7,7,15,0.75);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 6px; cursor: pointer; z-index: 10;
-      transition: background .15s;
-      border-radius: var(--radius-sm);
-    }
-    .pref-lock-overlay:hover { background: rgba(7,7,15,0.65); }
-    .pref-lock-icon { font-size: 1.4rem; }
-    .pref-lock-text { font-size: .72rem; color: #fbbf24; font-family: var(--ff); font-weight: 700; text-align: center; }
-
-    /* ── PREMIUM MODAL ── */
-    .modal-backdrop {
-      display: none; position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      align-items: center; justify-content: center;
-    }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      background: var(--card); border: 1px solid var(--border2);
-      border-radius: 24px; padding: 32px 28px 28px;
-      max-width: 360px; width: calc(100% - 32px);
-      display: flex; flex-direction: column; align-items: center; gap: 16px;
-      animation: cardIn .3s cubic-bezier(.16,1,.3,1);
-      position: relative;
-    }
-    .modal-close {
-      position: absolute; top: 16px; right: 16px;
-      background: var(--card2); border: 1px solid var(--border2);
-      border-radius: 8px; padding: 4px 10px; cursor: pointer;
-      color: var(--muted2); font-size: .78rem;
-    }
-    .modal-close:hover { color: var(--text); }
-    .modal-title { font-family: var(--ff); font-size: 1.2rem; font-weight: 800; text-align: center; }
-    .modal-sub { font-size: .82rem; color: var(--muted2); text-align: center; line-height: 1.6; }
-    .premium-features {
-      width: 100%; background: var(--card2); border-radius: var(--radius-sm);
-      padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
-    }
-    .premium-feature-row {
-      display: flex; align-items: center; gap: 10px;
-      font-size: .82rem; color: var(--text);
-    }
-    .premium-feature-row .feat-icon { font-size: 1.1rem; flex-shrink: 0; }
-    .premium-price {
-      font-family: var(--ff); font-size: 1.5rem; font-weight: 800;
-      color: #fbbf24;
-    }
-    .premium-price span { font-size: .78rem; color: var(--muted2); font-weight: 400; }
-    .btn-premium {
-      width: 100%; height: 50px;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24);
-      border: none; border-radius: var(--radius-sm);
-      color: #1a1000; font-family: var(--ff); font-size: 1rem; font-weight: 800;
-      cursor: pointer; transition: opacity .15s, transform .1s;
-      box-shadow: 0 6px 20px rgba(251,191,36,0.35);
-    }
-    .btn-premium:hover { opacity: .9; }
-    .btn-premium:active { transform: scale(.97); }
-
-    /* ── AVATAR ── */
-    .avatar-wrap {
-      display: flex; align-items: center; gap: 12px; width: 100%;
-    }
-    .avatar-preview {
-      width: 52px; height: 52px; border-radius: 14px;
-      background: var(--card2); border: 2px solid var(--border2);
-      overflow: hidden; flex-shrink: 0; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; transition: border-color .15s;
-    }
-    .avatar-preview:hover { border-color: var(--accent2); }
-    .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-    .avatar-info { flex: 1; }
-    .avatar-info-label { font-size: .72rem; color: var(--muted); font-family: var(--ff); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px; }
-    .avatar-info-sub { font-size: .72rem; color: var(--muted2); line-height: 1.5; }
-    .btn-avatar {
-      background: var(--card2); border: 1px solid var(--border2);
-      border-radius: var(--radius-sm); padding: 7px 14px;
-      color: var(--muted2); font-family: var(--ff); font-size: .78rem; font-weight: 600;
-      cursor: pointer; transition: all .15s;
-    }
-    .btn-avatar:hover { border-color: var(--accent2); color: var(--accent3); }
-
-    /* Partner avatar image in chat */
-    .partner-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
-
     /* ── IP BANNED SCREEN ── */
     #screen-banned {
       position: fixed; inset: 0; z-index: 999;
@@ -1100,20 +1001,6 @@
       <span id="user-country">Detecting location…</span>
     </div>
 
-    <!-- Avatar + Nickname row -->
-    <div class="avatar-wrap" style="width:100%">
-      <div class="avatar-preview" id="avatar-preview" onclick="document.getElementById('avatar-file-input').click()" title="Upload profile picture">
-        <span id="avatar-placeholder">🙂</span>
-        <img id="avatar-img" style="display:none" alt="avatar"/>
-      </div>
-      <div class="avatar-info">
-        <div class="avatar-info-label">Profile Picture</div>
-        <div class="avatar-info-sub">Optional · shown to strangers<br>Tap to upload (JPG/PNG, max 200KB)</div>
-      </div>
-      <button class="btn-avatar" onclick="document.getElementById('avatar-file-input').click()">📷 Upload</button>
-      <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleAvatarUpload(event)"/>
-    </div>
-
     <!-- Nickname -->
     <div class="nick-row">
       <span class="field-label">Nickname</span>
@@ -1130,23 +1017,13 @@
       </div>
     </div>
 
-    <!-- Gender Preference — Females only locked for free users -->
+    <!-- Gender Preference -->
     <div style="width:100%">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span class="field-label" style="margin:0">💬 Chat with</span>
-        <span id="premium-header-badge" style="display:none"><span class="premium-badge">⭐ PREMIUM</span></span>
-      </div>
-      <div class="pref-lock-wrap">
-        <div class="gender-row">
-          <button class="gender-btn active" id="p-any" onclick="selectPref('any', this)">🌍 Anyone</button>
-          <button class="gender-btn" id="p-male" onclick="selectPref('male', this)">♂ Males</button>
-          <button class="gender-btn" id="p-female" onclick="selectPref('female', this)" disabled>♀ Females</button>
-        </div>
-        <!-- Lock overlay shown for non-premium users -->
-        <div class="pref-lock-overlay" id="pref-lock" onclick="openPremiumModal()">
-          <div class="pref-lock-icon">🔒</div>
-          <div class="pref-lock-text">Females only — Premium<br><u>Tap to unlock</u></div>
-        </div>
+      <span class="field-label">💬 Chat with</span>
+      <div class="gender-row">
+        <button class="gender-btn active" id="p-any" onclick="selectPref('any', this)">🌍 Anyone</button>
+        <button class="gender-btn" id="p-male" onclick="selectPref('male', this)">♂ Males</button>
+        <button class="gender-btn" id="p-female" onclick="selectPref('female', this)">♀ Females</button>
       </div>
     </div>
 
@@ -1345,25 +1222,6 @@
   </div>
 </div>
 
-<!-- ── PREMIUM MODAL ── -->
-<div class="modal-backdrop" id="premium-modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closePremiumModal()">✕ Close</button>
-    <div style="font-size:2.2rem">⭐</div>
-    <div class="modal-title">Unlock Premium</div>
-    <div class="modal-sub">Get the best StrangerChat experience with exclusive features.</div>
-    <div class="premium-features">
-      <div class="premium-feature-row"><span class="feat-icon">♀️</span><span><b>Females only filter</b> — match exclusively with female users</span></div>
-      <div class="premium-feature-row"><span class="feat-icon">🚫</span><span><b>Ad-free</b> — zero interruptions, ever</span></div>
-      <div class="premium-feature-row"><span class="feat-icon">⚡</span><span><b>Priority matching</b> — skip the queue</span></div>
-      <div class="premium-feature-row"><span class="feat-icon">🎨</span><span><b>Profile picture</b> — show your avatar to strangers</span></div>
-    </div>
-    <div class="premium-price">$4.99 <span>/ month</span></div>
-    <button class="btn-premium" onclick="handleUpgrade()">⭐ Get Premium Now</button>
-    <div style="font-size:.68rem;color:var(--muted);text-align:center">Cancel anytime · Secure checkout via Stripe</div>
-  </div>
-</div>
-
 <!-- ── IP BANNED SCREEN ── -->
 <div id="screen-banned">
   <div class="banned-card">
@@ -1418,8 +1276,6 @@ let userCountry = 'Unknown';
 let userFlag = '🌍';
 let selectedLang = '';
 let chatMode = 'text';
-let isPremium = false;
-let userAvatar = null;
 
 (function init() {
   // ── COUNTRY DETECTION ──
@@ -1456,19 +1312,6 @@ let userAvatar = null;
   document.addEventListener('click', e => {
     if (!e.target.closest('.emoji-wrap')) closeEmoji();
   });
-
-  // Load premium status & avatar from server
-  fetch('/api/premium-status').then(r => r.json()).then(d => {
-    isPremium = d.premium;
-    applyPremiumUI();
-  }).catch(() => {});
-
-  fetch('/api/avatar').then(r => r.json()).then(d => {
-    if (d.avatar) {
-      userAvatar = d.avatar;
-      showAvatarPreview(d.avatar);
-    }
-  }).catch(() => {});
 })();
 
 function setCountry(countryName) {
@@ -1568,8 +1411,7 @@ function startChat(mode = 'text') {
     flag: userFlag,
     interests: selectedInterests,
     gender: selectedGender,
-    pref: selectedPref,
-    avatar: userAvatar || null
+    pref: selectedPref
   });
 
   if (mode === 'video') {
@@ -1716,12 +1558,7 @@ function setStatus(html, cls) {
 }
 
 function showPartnerBar(partner) {
-  const avatarEl = document.getElementById('p-flag');
-  if (partner.avatar) {
-    avatarEl.innerHTML = `<img src="${partner.avatar}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
-  } else {
-    avatarEl.textContent = partner.flag || '🌍';
-  }
+  document.getElementById('p-flag').textContent = partner.flag || '🌍';
   document.getElementById('p-name').textContent = partner.username || 'Stranger';
   document.getElementById('p-country').textContent = partner.country || 'Unknown';
   document.getElementById('partner-bar').classList.add('show');
@@ -1772,90 +1609,6 @@ function playSound() {
   } catch(e) {}
 }
 
-
-// ── PREMIUM ──
-function applyPremiumUI() {
-  const lock = document.getElementById('pref-lock');
-  const pfBtn = document.getElementById('p-female');
-  const badge = document.getElementById('premium-header-badge');
-  if (isPremium) {
-    if (lock) lock.style.display = 'none';
-    if (pfBtn) pfBtn.disabled = false;
-    if (badge) badge.style.display = 'inline-flex';
-  } else {
-    if (lock) lock.style.display = 'flex';
-    if (pfBtn) pfBtn.disabled = true;
-    if (badge) badge.style.display = 'none';
-  }
-}
-
-function openPremiumModal() {
-  document.getElementById('premium-modal').classList.add('open');
-}
-function closePremiumModal() {
-  document.getElementById('premium-modal').classList.remove('open');
-}
-
-async function handleUpgrade() {
-  try {
-    const res = await fetch('/api/upgrade', { method: 'POST' });
-    const data = await res.json();
-    if (data.success) {
-      isPremium = true;
-      applyPremiumUI();
-      closePremiumModal();
-      showToast('⭐ Premium activated! Enjoy all features.');
-    } else {
-      // Redirect to payment page or show message
-      showToast('🔗 Payment integration coming soon!', 'warn');
-      // window.location.href = '/checkout'; // uncomment when Stripe is set up
-    }
-  } catch {
-    showToast('⚠️ Could not connect to payment server.', 'warn');
-  }
-}
-
-// ── AVATAR ──
-function showAvatarPreview(dataUrl) {
-  const img = document.getElementById('avatar-img');
-  const placeholder = document.getElementById('avatar-placeholder');
-  if (img && placeholder) {
-    img.src = dataUrl;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
-  }
-}
-
-function handleAvatarUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 200 * 1024) {
-    showToast('⚠️ Image too large — max 200KB', 'warn');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const dataUrl = e.target.result;
-    userAvatar = dataUrl;
-    showAvatarPreview(dataUrl);
-    try {
-      const res = await fetch('/api/avatar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataUrl })
-      });
-      const d = await res.json();
-      if (d.success) {
-        showToast('✅ Profile picture saved!');
-      } else {
-        showToast('⚠️ ' + (d.error || 'Could not save avatar'), 'warn');
-      }
-    } catch {
-      showToast('✅ Avatar set for this session');
-    }
-  };
-  reader.readAsDataURL(file);
-}
 
 // ── IP BANNED ──
 socket.on('ipBanned', () => {

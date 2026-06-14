@@ -74,34 +74,6 @@ app.post('/verify-turnstile', async (req, res) => {
   }
 });
 
-// ── PREMIUM CHECK ──
-// In production replace with real payment/DB lookup
-app.get('/api/premium-status', (req, res) => {
-  const isPremium = req.session.premium === true;
-  res.json({ premium: isPremium });
-});
-
-// ── FAKE PREMIUM UPGRADE (replace with Stripe etc.) ──
-app.post('/api/upgrade', (req, res) => {
-  // TODO: integrate real payment. For now just a stub.
-  res.json({ success: false, message: 'Payment integration required' });
-});
-
-// ── AVATAR UPLOAD (base64 stored in session, max 200KB) ──
-app.post('/api/avatar', (req, res) => {
-  const { dataUrl } = req.body;
-  if (!dataUrl || dataUrl.length > 300000) {
-    return res.json({ success: false, error: 'Image too large (max ~200KB)' });
-  }
-  req.session.avatar = dataUrl;
-  req.session.save();
-  res.json({ success: true });
-});
-
-app.get('/api/avatar', (req, res) => {
-  res.json({ avatar: req.session.avatar || null });
-});
-
 // ── TRANSLATION ROUTE ──
 app.post('/translate', async (req, res) => {
   try {
@@ -231,8 +203,8 @@ function tryMatch(interests) {
           queue.splice(i, 1);
           pairs.set(a, b);
           pairs.set(b, a);
-          io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b, avatar: infoB.avatar || null }, isInitiator: true });
-          io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a, avatar: infoA.avatar || null }, isInitiator: false });
+          io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b }, isInitiator: true });
+          io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a }, isInitiator: false });
           broadcastStats();
           return;
         }
