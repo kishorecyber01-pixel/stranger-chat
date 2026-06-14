@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-R2YBDBR60T"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -51,11 +50,10 @@
       background: var(--bg);
       color: var(--text);
       font-family: var(--fb);
-      overflow: hidden;
+      /* FIXED: removed overflow:hidden so landing can scroll */
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── ANIMATED BACKGROUND ── */
     .bg-canvas {
       position: fixed;
       inset: 0;
@@ -63,7 +61,6 @@
       overflow: hidden;
       pointer-events: none;
     }
-
     .bg-orb {
       position: absolute;
       border-radius: 50%;
@@ -71,7 +68,6 @@
       opacity: 0.35;
       animation: drift 12s ease-in-out infinite alternate;
     }
-
     .bg-orb-1 {
       width: 500px; height: 500px;
       background: radial-gradient(circle, #7c3aed, transparent 70%);
@@ -94,7 +90,6 @@
       animation-delay: -8s;
       opacity: 0.2;
     }
-
     .bg-grid {
       position: absolute;
       inset: 0;
@@ -103,18 +98,16 @@
         linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
       background-size: 50px 50px;
     }
-
     @keyframes drift {
-      0%   { transform: translate(0, 0) scale(1); }
-      50%  { transform: translate(30px, -40px) scale(1.1); }
-      100% { transform: translate(-20px, 20px) scale(0.95); }
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(30px,-40px) scale(1.1); }
+      100% { transform: translate(-20px,20px) scale(0.95); }
     }
 
     /* ── SCREENS ── */
     .screen {
       display: none;
       flex-direction: column;
-      height: 100dvh;
       max-width: 520px;
       margin: 0 auto;
       padding: 0 16px;
@@ -122,6 +115,17 @@
       z-index: 1;
     }
     .screen.active { display: flex; }
+
+    /* Landing screen scrolls naturally */
+    #screen-landing {
+      min-height: 100dvh;
+    }
+
+    /* Chat screen is fixed height */
+    #screen-chat {
+      height: 100dvh;
+      overflow: hidden;
+    }
 
     /* ── HEADER ── */
     header {
@@ -131,7 +135,6 @@
       padding: 14px 0 12px;
       flex-shrink: 0;
     }
-
     .logo {
       font-family: var(--ff);
       font-size: 1.25rem;
@@ -150,9 +153,7 @@
       box-shadow: 0 4px 12px var(--glow);
     }
     .logo span { color: var(--accent3); }
-
     .header-right { display: flex; align-items: center; gap: 10px; }
-
     .stats-pill {
       background: var(--card);
       border: 1px solid var(--border2);
@@ -176,7 +177,6 @@
       50% { opacity: 0.4; }
     }
     .stats-pill b { color: var(--green); font-weight: 600; }
-
     .theme-btn {
       background: var(--card);
       border: 1px solid var(--border2);
@@ -189,24 +189,20 @@
     }
     .theme-btn:hover { border-color: var(--accent2); background: var(--card2); }
 
-    /* ── LANDING ── */
+    /* ── LANDING CONTENT ── */
     #landing {
-      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
       gap: 16px;
-      overflow-y: auto;
-      padding: 10px 0 24px;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+      padding: 10px 0 40px;
+      width: 100%;
     }
-    #landing::-webkit-scrollbar { display: none; }
 
     .hero {
       text-align: center;
       padding: 8px 0 4px;
+      width: 100%;
     }
     .hero-badge {
       display: inline-flex;
@@ -245,19 +241,21 @@
       margin: 0 auto;
     }
 
-    /* ── SETUP CARD ── */
-    .setup-card {
+    /* ── COUNTRY BADGE ── */
+    .country-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       background: var(--card);
       border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 20px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: .78rem;
+      color: var(--muted2);
+      font-family: var(--ff);
+      font-weight: 500;
     }
+    .country-badge span { font-size: 1.1rem; }
 
     .field-label {
       font-size: .72rem;
@@ -269,9 +267,6 @@
       display: block;
       font-family: var(--ff);
     }
-
-    .setup-row { display: flex; gap: 10px; }
-    .setup-row > div { flex: 1; }
 
     .inp {
       background: var(--surface);
@@ -290,13 +285,13 @@
       box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
     }
     .inp::placeholder { color: var(--muted); }
-    select.inp { cursor: pointer; }
 
     /* ── INTERESTS ── */
     .interest-wrap {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
+      width: 100%;
     }
     .tag {
       background: var(--surface);
@@ -317,13 +312,10 @@
       color: var(--accent3);
       box-shadow: 0 0 12px rgba(168,85,247,0.2);
     }
-    .tag:hover:not(.active) {
-      border-color: var(--accent2);
-      color: var(--text);
-    }
+    .tag:hover:not(.active) { border-color: var(--accent2); color: var(--text); }
 
     /* ── TURNSTILE ── */
-    .cf-turnstile { border-radius: 10px; overflow: hidden; }
+    .cf-turnstile { border-radius: 10px; overflow: hidden; width: 100%; }
 
     /* ── START BUTTON ── */
     .btn-start {
@@ -367,6 +359,9 @@
     }
     .rules strong { color: var(--muted2); font-weight: 600; }
 
+    /* ── NICKNAME ROW ── */
+    .nick-row { width: 100%; }
+
     /* ── BUTTONS ── */
     .btn {
       border: none;
@@ -384,7 +379,6 @@
       gap: 5px;
     }
     .btn:active { transform: scale(.95); }
-
     .btn-icon {
       background: var(--card2);
       border: 1px solid var(--border2);
@@ -392,14 +386,12 @@
       min-width: 42px;
     }
     .btn-icon:hover { border-color: var(--accent2); color: var(--accent3); }
-
     .btn-danger {
       background: rgba(244,63,94,0.1);
       border: 1px solid rgba(244,63,94,0.3);
       color: var(--red);
     }
     .btn-danger:hover { background: rgba(244,63,94,0.2); }
-
     .btn-send {
       background: var(--me-bubble);
       color: #fff;
@@ -441,7 +433,6 @@
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     .partner-avatar {
       width: 38px; height: 38px;
       background: var(--me-bubble);
@@ -481,7 +472,6 @@
       from { opacity: 0; transform: translateY(6px) scale(.97); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
-
     .msg.me {
       background: var(--me-bubble);
       align-self: flex-end;
@@ -547,19 +537,16 @@
       flex-shrink: 0;
       border-top: 1px solid var(--border);
     }
-
     .controls {
       display: flex;
       gap: 7px;
       margin-bottom: 8px;
     }
-
     .input-row {
       display: flex;
       gap: 7px;
       align-items: flex-end;
     }
-
     textarea.inp {
       flex: 1;
       resize: none;
@@ -634,10 +621,8 @@
     [data-theme="light"] .bg-orb { opacity: 0.12; }
     [data-theme="light"] .msg.me { box-shadow: 0 4px 16px rgba(124,58,237,0.25); }
 
-    /* ── MOBILE TWEAKS ── */
     @media (max-width: 400px) {
       .hero h1 { font-size: 1.75rem; }
-      .setup-row { flex-direction: column; gap: 10px; }
       .btn { font-size: .78rem; padding: 0 12px; }
       .controls { gap: 5px; }
     }
@@ -645,7 +630,6 @@
 </head>
 <body>
 
-<!-- Animated Background -->
 <div class="bg-canvas">
   <div class="bg-grid"></div>
   <div class="bg-orb bg-orb-1"></div>
@@ -670,41 +654,49 @@
   </header>
 
   <div id="landing">
+
     <div class="hero">
       <div class="hero-badge">🌍 Anonymous · Instant · Free</div>
       <h1>Chat with<br/><em>strangers</em><br/>worldwide</h1>
       <p>Pick a name, choose your vibe, and start talking to real people around the world.</p>
     </div>
 
-    <div class="setup-row">
-  <div>
-    <span class="field-label">Nickname</span>
-    <input class="inp" id="inp-username"
-      placeholder="e.g. CoolDude99"
-      maxlength="20"/>
-  </div>
-</div>
+    <!-- Auto-detected country badge -->
+    <div class="country-badge" id="country-badge">
+      <span id="user-flag">🌍</span>
+      <span id="user-country">Detecting location…</span>
+    </div>
 
-      <div>
-        <span class="field-label">Interests — match with similar people</span>
-        <div class="interest-wrap" id="interest-tags"></div>
-      </div>
+    <!-- Nickname -->
+    <div class="nick-row">
+      <span class="field-label">Nickname</span>
+      <input class="inp" id="inp-username" placeholder="e.g. CoolDude99" maxlength="20"/>
+    </div>
 
-      <div class="cf-turnstile" data-sitekey="0x4AAAAAADjhTyRqdkyXeLMj"></div>
+    <!-- Interests -->
+    <div style="width:100%">
+      <span class="field-label">Interests — match with similar people</span>
+      <div class="interest-wrap" id="interest-tags"></div>
+    </div>
 
-      <button class="btn-start" onclick="startChat()">
-        Start Chatting →
-      </button>
+    <!-- Turnstile CAPTCHA -->
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAADjhTyRqdkyXeLMj"></div>
 
-      <div class="rules">
-        <strong>Community rules</strong><br>
-        • Be respectful — treat others how you'd like to be treated<br>
-        • No hate speech, harassment, or explicit content<br>
-        • Never share personal information<br>
-        • This platform is for adults only (18+)
-      </div>
+    <!-- Start Button -->
+    <button class="btn-start" onclick="startChat()">
+      Start Chatting →
+    </button>
 
-    </div><!-- end #landing -->
+    <!-- Rules -->
+    <div class="rules">
+      <strong>Community rules</strong><br>
+      • Be respectful — treat others how you'd like to be treated<br>
+      • No hate speech, harassment, or explicit content<br>
+      • Never share personal information<br>
+      • This platform is for adults only (18+)
+    </div>
+
+  </div><!-- end #landing -->
 </div><!-- end #screen-landing -->
 
 <!-- ── CHAT SCREEN ── -->
@@ -805,26 +797,33 @@ let typingTimeout = null;
 let isTypingSent = false;
 let selectedInterests = [];
 let isDark = true;
-let userCountry = "Unknown";
-let userFlag = "🌍";
+let userCountry = 'Unknown';
+let userFlag = '🌍';
 
 (function init() {
-  fetch("https://ipapi.co/json/")
-  .then(res => res.json())
-  .then(data => {
-    userCountry = data.country_name;
+  // ── COUNTRY DETECTION ──
+  // Try ipapi.co first, fallback to ip-api.com
+  fetch('https://ipapi.co/json/')
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.country_name) {
+        setCountry(data.country_name);
+      } else {
+        throw new Error('no data');
+      }
+    })
+    .catch(() => {
+      // Fallback API
+      fetch('https://ip-api.com/json/?fields=country')
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.country) setCountry(data.country);
+          else setCountry('Unknown');
+        })
+        .catch(() => setCountry('Unknown'));
+    });
 
-    const found = COUNTRIES.find(
-      c => c.name === data.country_name
-    );
-
-    if (found) {
-      userFlag = found.flag;
-    }
-  })
-  .catch(() => {});
-  
-
+  // Build interest tags
   const container = document.getElementById('interest-tags');
   INTERESTS.forEach(i => {
     const tag = document.createElement('div');
@@ -834,6 +833,7 @@ let userFlag = "🌍";
     container.appendChild(tag);
   });
 
+  // Build emoji grid
   const grid = document.getElementById('emoji-grid');
   EMOJIS.forEach(e => {
     const span = document.createElement('span');
@@ -847,6 +847,14 @@ let userFlag = "🌍";
   });
 })();
 
+function setCountry(countryName) {
+  userCountry = countryName;
+  const found = COUNTRIES.find(c => c.name === countryName);
+  userFlag = found ? found.flag : '🌍';
+  document.getElementById('user-flag').textContent = userFlag;
+  document.getElementById('user-country').textContent = userCountry;
+}
+
 function toggleInterest(el, interest) {
   el.classList.toggle('active');
   if (el.classList.contains('active')) selectedInterests.push(interest);
@@ -856,7 +864,7 @@ function toggleInterest(el, interest) {
 socket.on('connect', () => setStatus('Connected — ready to chat!', ''));
 socket.on('disconnect', () => setStatus('Disconnected. Refresh the page.', 'error'));
 
-socket.on('stats', ({ online, waiting }) => {
+socket.on('stats', ({ online }) => {
   document.getElementById('s-online').textContent = online;
   document.getElementById('s-online2').textContent = online;
 });
@@ -906,7 +914,7 @@ socket.on('banned', () => showToast('🚫 You have been banned for violations.')
 
 async function startChat() {
   const token = document.querySelector('[name="cf-turnstile-response"]')?.value;
-  if (!token) { alert("Please complete the CAPTCHA"); return; }
+  if (!token) { alert('Please complete the CAPTCHA first'); return; }
 
   try {
     const res = await fetch('/verify-turnstile', {
@@ -915,21 +923,17 @@ async function startChat() {
       body: JSON.stringify({ token })
     });
     const data = await res.json();
-    if (!data.success) { alert("CAPTCHA failed, please try again"); return; }
+    if (!data.success) { alert('CAPTCHA failed, please try again'); return; }
   } catch (err) {
-    alert("CAPTCHA verification error, try again");
+    alert('CAPTCHA verification error, try again');
     return;
   }
 
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
-  const country = {
-  name: userCountry,
-  flag: userFlag
-};
   socket.emit('setInfo', {
     username,
-    country: country.name,
-    flag: country.flag,
+    country: userCountry,
+    flag: userFlag,
     interests: selectedInterests
   });
 
