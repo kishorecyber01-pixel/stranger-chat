@@ -53,16 +53,23 @@ app.post('/verify-turnstile', async (req, res) => {
 // ── TRANSLATION ROUTE (MyMemory — free, no key needed) ──
 app.post('/translate', async (req, res) => {
   try {
-    const { text, targetLang } = req.body;
+    const { text, targetLang, sourceLang = 'en' } = req.body;
     if (!text || !targetLang) {
       return res.json({ translatedText: text });
     }
-    // MyMemory API: free, no key, auto-detects source language
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${targetLang}`;
-    const response = await axios.get(url, { timeout: 5000 });
-    const translated = response.data?.responseData?.translatedText;
-    // MyMemory returns original if it can't translate
-    if (translated && translated.toLowerCase() !== text.toLowerCase()) {
+    // MyMemory requires explicit source|target — 'auto' is NOT supported
+    // We use 'en' as default source; if same as target just return original
+    if (sourceLang === targetLang) {
+      return res.json({ translatedText: text });
+    }
+    const langpair = `${sourceLang}|${targetLang}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`;
+    const response = await axios.get(url, { timeout: 6000 });
+    const result = response.data?.responseData;
+    const translated = result?.translatedText;
+    const match = result?.match ?? 0;
+    // Only use translation if confidence is reasonable and it's different
+    if (translated && match > 0 && translated.toLowerCase() !== text.toLowerCase()) {
       res.json({ translatedText: translated });
     } else {
       res.json({ translatedText: text });
