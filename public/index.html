@@ -656,6 +656,195 @@
     }
     .toast.show { opacity: 1; }
 
+
+    /* ── MODE BUTTONS ── */
+    .mode-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+    }
+    .btn-mode {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 18px 12px;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--card);
+      cursor: pointer;
+      transition: all .2s;
+      font-family: var(--ff);
+      color: var(--text);
+    }
+    .btn-mode:hover { border-color: var(--accent2); background: var(--card2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.2); }
+    .btn-mode:active { transform: scale(.97); }
+    .btn-mode-video { border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.08); }
+    .btn-mode-video:hover { border-color: var(--accent2); background: rgba(124,58,237,0.18); }
+    .mode-icon { font-size: 1.8rem; }
+    .mode-label { font-size: .95rem; font-weight: 700; letter-spacing: -.3px; }
+    .mode-sub { font-size: .7rem; color: var(--muted2); font-weight: 400; }
+
+    /* ── VIDEO CHAT SCREEN ── */
+    #screen-video {
+      height: 100dvh;
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+    }
+    #screen-video.active { display: flex; }
+
+    .video-area {
+      position: relative;
+      flex: 1;
+      background: #000;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Stranger video — fills the area */
+    #video-remote {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #0a0a15;
+      display: block;
+    }
+
+    /* Waiting overlay on video */
+    .video-waiting {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #07070f;
+      color: var(--muted2);
+      font-family: var(--ff);
+    }
+    .video-waiting-icon { font-size: 3rem; animation: pulse-dot 2s infinite; }
+    .video-waiting h3 { font-size: 1rem; font-weight: 600; }
+    .video-waiting p { font-size: .78rem; color: var(--muted); }
+
+    /* My camera — small pip in corner */
+    #video-local {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 100px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: #111;
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    @media (min-width: 500px) {
+      #video-local { width: 130px; height: 170px; }
+    }
+
+    /* Camera off placeholder */
+    .cam-off-badge {
+      position: absolute;
+      bottom: 12px; right: 12px;
+      width: 100px; height: 130px;
+      background: var(--card2);
+      border: 2px solid var(--border2);
+      border-radius: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      z-index: 10;
+    }
+    .cam-off-badge.show { display: flex; }
+
+    /* Video controls bar */
+    .video-controls {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .video-btn-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .vbtn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-family: var(--ff);
+      font-size: .65rem;
+      color: var(--muted2);
+      font-weight: 600;
+      transition: all .15s;
+      min-width: 60px;
+    }
+    .vbtn:hover { border-color: var(--accent2); color: var(--text); }
+    .vbtn:active { transform: scale(.93); }
+    .vbtn svg, .vbtn span.vicon { font-size: 1.2rem; display: block; margin-bottom: 1px; }
+    .vbtn.active { background: rgba(124,58,237,0.2); border-color: var(--accent2); color: var(--accent3); }
+    .vbtn.danger { background: rgba(244,63,94,0.12); border-color: rgba(244,63,94,0.35); color: var(--red); }
+    .vbtn.danger:hover { background: rgba(244,63,94,0.25); }
+    .vbtn-next {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border-color: transparent;
+      color: #fff;
+      padding: 10px 28px;
+    }
+    .vbtn-next:hover { opacity: .88; }
+
+    /* Text chat panel inside video screen */
+    .video-chat-panel {
+      max-height: 160px;
+      overflow-y: auto;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scrollbar-width: none;
+    }
+    .video-chat-panel::-webkit-scrollbar { display: none; }
+    .video-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+    }
+    .video-input-row textarea {
+      flex: 1;
+      min-height: 36px;
+      max-height: 72px;
+      resize: none;
+      padding: 8px 12px;
+      font-size: .82rem;
+    }
+    .video-status {
+      text-align: center;
+      font-size: .72rem;
+      color: var(--muted2);
+      font-family: var(--ff);
+      padding: 3px 0;
+    }
+    .video-status.connected { color: var(--green); }
+    .video-status.waiting { color: var(--accent3); }
+
     /* ── LIGHT THEME ── */
     [data-theme="light"] {
       --bg: #f5f4ff;
@@ -731,10 +920,19 @@
       <div class="interest-wrap" id="interest-tags"></div>
     </div>
 
-    <!-- Start Button -->
-    <button class="btn-start" onclick="startChat()">
-      Start Chatting →
-    </button>
+    <!-- Mode Buttons -->
+    <div class="mode-btns">
+      <button class="btn-mode btn-mode-text" onclick="startChat('text')">
+        <span class="mode-icon">💬</span>
+        <span class="mode-label">Text Chat</span>
+        <span class="mode-sub">Anonymous messaging</span>
+      </button>
+      <button class="btn-mode btn-mode-video" onclick="startChat('video')">
+        <span class="mode-icon">📹</span>
+        <span class="mode-label">Video Chat</span>
+        <span class="mode-sub">Face-to-face strangers</span>
+      </button>
+    </div>
 
     <!-- Rules -->
     <div class="rules">
@@ -833,6 +1031,76 @@
   </div>
 </div>
 
+<!-- ── VIDEO CHAT SCREEN ── -->
+<div class="screen" id="screen-video">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📹</div>
+      Stranger<span>Chat</span>
+    </div>
+    <div class="header-right">
+      <div class="stats-pill">
+        <div class="stats-dot"></div>
+        <b id="s-online3">0</b> online
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()">☀️</button>
+    </div>
+  </header>
+
+  <!-- Video area -->
+  <div class="video-area">
+    <video id="video-remote" autoplay playsinline></video>
+
+    <!-- Waiting overlay -->
+    <div class="video-waiting" id="video-waiting">
+      <div class="video-waiting-icon">🔍</div>
+      <h3>Finding a stranger…</h3>
+      <p>Make sure your camera is allowed</p>
+    </div>
+
+    <!-- My PiP camera -->
+    <video id="video-local" autoplay playsinline muted></video>
+    <div class="cam-off-badge" id="cam-off-badge">📷</div>
+  </div>
+
+  <!-- Controls + chat -->
+  <div class="video-controls">
+    <div class="video-status" id="video-status">Connecting…</div>
+
+    <!-- Text chat inside video -->
+    <div class="video-chat-panel" id="video-chat-box"></div>
+
+    <!-- Text input row -->
+    <div class="video-input-row">
+      <textarea class="inp" id="video-msg-input" placeholder="Type a message…" rows="1" disabled
+        oninput="autoResize(this)"
+        onkeydown="handleVideoKey(event)"></textarea>
+      <button class="btn btn-send" id="video-btn-send" onclick="sendVideoMessage()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Video control buttons -->
+    <div class="video-btn-row">
+      <button class="vbtn" id="vbtn-mic" onclick="toggleMic()">
+        <span class="vicon">🎤</span>Mute
+      </button>
+      <button class="vbtn" id="vbtn-cam" onclick="toggleCam()">
+        <span class="vicon">📹</span>Camera
+      </button>
+      <button class="vbtn vbtn-next" onclick="nextVideoStranger()">
+        ⏭ Next
+      </button>
+      <button class="vbtn danger" onclick="stopVideoChat()">
+        ✕ Stop
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -877,6 +1145,7 @@ let isDark = true;
 let userCountry = 'Unknown';
 let userFlag = '🌍';
 let selectedLang = '';
+let chatMode = 'text';
 
 (function init() {
   // ── COUNTRY DETECTION ──
@@ -945,6 +1214,7 @@ socket.on('disconnect', () => setStatus('Disconnected. Refresh the page.', 'erro
 socket.on('stats', ({ online }) => {
   document.getElementById('s-online').textContent = online;
   document.getElementById('s-online2').textContent = online;
+  document.getElementById('s-online3').textContent = online;
 });
 
 socket.on('waiting', () => {
@@ -954,55 +1224,13 @@ socket.on('waiting', () => {
   hidePartnerBar();
 });
 
-socket.on('matched', ({ partner }) => {
-  state = 'chatting';
-  setStatus('● Connected!', 'connected');
-  showPartnerBar(partner);
-  addMsg(`You're now chatting with ${partner.flag} ${partner.username} from ${partner.country}. Say hi!`, 'system');
-  enableInput(true);
-  document.getElementById('btn-report').disabled = false;
-  playSound();
-});
+// matched handler moved to WebRTC section
 
-socket.on('message', async ({ text }) => {
-  hideTyping();
-  if (selectedLang) {
-    // Show message immediately with a translating indicator
-    const tempId = 'msg-' + Date.now();
-    addMsg(text, 'them', null, tempId);
-    setTranslateStatus('⏳');
-    try {
-      const res = await fetch('/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, targetLang: selectedLang })
-      });
-      const data = await res.json();
-      const translated = data.translatedText || text;
-      setTranslateStatus('✓ On');
-      if (translated && translated.toLowerCase() !== text.toLowerCase()) {
-        // Update the existing message bubble with translation
-        updateMsgTranslation(tempId, translated);
-      }
-    } catch {
-      setTranslateStatus('✓ On');
-    }
-  } else {
-    addMsg(text, 'them');
-  }
-});
+// message handler moved to WebRTC section
 
 socket.on('typing', isTyping => isTyping ? showTyping() : hideTyping());
 
-socket.on('strangerLeft', () => {
-  state = 'idle';
-  hideTyping();
-  enableInput(false);
-  document.getElementById('btn-report').disabled = true;
-  setStatus('Stranger disconnected. Click Next for a new chat.', '');
-  addMsg('Stranger has disconnected.', 'system');
-  hidePartnerBar();
-});
+// strangerLeft handler moved to WebRTC section
 
 socket.on('idle', () => {
   state = 'idle';
@@ -1038,7 +1266,8 @@ function onLangChange(val) {
   }
 }
 
-function startChat() {
+function startChat(mode = 'text') {
+  chatMode = mode;
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
   socket.emit('setInfo', {
     username,
@@ -1047,8 +1276,12 @@ function startChat() {
     interests: selectedInterests
   });
 
-  showScreen('screen-chat');
-  socket.emit('findStranger', { interests: selectedInterests });
+  if (mode === 'video') {
+    startVideoChat();
+  } else {
+    showScreen('screen-chat');
+    socket.emit('findStranger', { interests: selectedInterests });
+  }
 }
 
 function nextStranger() {
@@ -1237,6 +1470,291 @@ function playSound() {
     o.start(); o.stop(ctx.currentTime + 0.4);
   } catch(e) {}
 }
+
+// ════════════════════════════════════════
+// ── VIDEO CHAT / WebRTC ──
+// ════════════════════════════════════════
+let localStream = null;
+let peerConnection = null;
+let micEnabled = true;
+let camEnabled = true;
+let videoPartnerId = null;
+
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
+
+async function startVideoChat() {
+  showScreen('screen-video');
+  setVideoStatus('Starting camera…', '');
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('video-local').srcObject = localStream;
+    setVideoStatus('🔍 Looking for a stranger…', 'waiting');
+    document.getElementById('video-waiting').style.display = 'flex';
+    socket.emit('findStranger', { interests: selectedInterests, mode: 'video' });
+  } catch (err) {
+    setVideoStatus('❌ Camera/mic blocked. Please allow access.', '');
+    showToast('Camera access denied — check browser permissions', 'warn');
+  }
+}
+
+function createPeerConnection(partnerId) {
+  videoPartnerId = partnerId;
+  peerConnection = new RTCPeerConnection(RTC_CONFIG);
+
+  // Add local tracks
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  // When we get remote video
+  peerConnection.ontrack = (event) => {
+    const remoteVideo = document.getElementById('video-remote');
+    remoteVideo.srcObject = event.streams[0];
+    document.getElementById('video-waiting').style.display = 'none';
+  };
+
+  // Send ICE candidates to partner
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit('webrtc-ice', { to: partnerId, candidate: event.candidate });
+    }
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    const s = peerConnection?.connectionState;
+    if (s === 'connected') setVideoStatus('● Connected!', 'connected');
+    if (s === 'disconnected' || s === 'failed') handleVideoDisconnect();
+  };
+}
+
+async function makeOffer(partnerId) {
+  createPeerConnection(partnerId);
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  socket.emit('webrtc-offer', { to: partnerId, offer });
+}
+
+async function handleOffer(from, offer) {
+  createPeerConnection(from);
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+  socket.emit('webrtc-answer', { to: from, answer });
+}
+
+async function handleAnswer(answer) {
+  if (peerConnection) {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  }
+}
+
+async function handleIce(candidate) {
+  if (peerConnection) {
+    try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+  }
+}
+
+function closePeerConnection() {
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  const remoteVideo = document.getElementById('video-remote');
+  remoteVideo.srcObject = null;
+  document.getElementById('video-waiting').style.display = 'flex';
+  videoPartnerId = null;
+}
+
+function stopLocalStream() {
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  document.getElementById('video-local').srcObject = null;
+}
+
+function handleVideoDisconnect() {
+  closePeerConnection();
+  setVideoStatus('Stranger left. Click Next for another.', '');
+  addVideoMsg('Stranger disconnected.', 'system');
+  document.getElementById('video-msg-input').disabled = true;
+  document.getElementById('video-btn-send').disabled = true;
+}
+
+function toggleMic() {
+  if (!localStream) return;
+  micEnabled = !micEnabled;
+  localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+  const btn = document.getElementById('vbtn-mic');
+  btn.querySelector('.vicon').textContent = micEnabled ? '🎤' : '🔇';
+  btn.querySelector(':last-child') || (btn.lastChild.textContent = micEnabled ? 'Mute' : 'Unmuted');
+  btn.classList.toggle('active', !micEnabled);
+  // Update label
+  btn.innerHTML = `<span class="vicon">${micEnabled ? '🎤' : '🔇'}</span>${micEnabled ? 'Mute' : 'Unmuted'}`;
+}
+
+function toggleCam() {
+  if (!localStream) return;
+  camEnabled = !camEnabled;
+  localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
+  const btn = document.getElementById('vbtn-cam');
+  btn.innerHTML = `<span class="vicon">${camEnabled ? '📹' : '🚫'}</span>${camEnabled ? 'Camera' : 'Off'}`;
+  btn.classList.toggle('active', !camEnabled);
+  document.getElementById('video-local').style.display = camEnabled ? 'block' : 'none';
+  document.getElementById('cam-off-badge').classList.toggle('show', !camEnabled);
+}
+
+function nextVideoStranger() {
+  closePeerConnection();
+  clearVideoChat();
+  document.getElementById('video-waiting').style.display = 'flex';
+  document.getElementById('video-waiting').querySelector('h3').textContent = 'Finding next stranger…';
+  document.getElementById('video-msg-input').disabled = true;
+  document.getElementById('video-btn-send').disabled = true;
+  setVideoStatus('🔍 Looking for next stranger…', 'waiting');
+  socket.emit('disconnect_chat');
+  setTimeout(() => socket.emit('findStranger', { interests: selectedInterests, mode: 'video' }), 150);
+}
+
+function stopVideoChat() {
+  closePeerConnection();
+  stopLocalStream();
+  clearVideoChat();
+  socket.emit('disconnect_chat');
+  // Reset controls
+  micEnabled = true; camEnabled = true;
+  document.getElementById('vbtn-mic').innerHTML = '<span class="vicon">🎤</span>Mute';
+  document.getElementById('vbtn-cam').innerHTML = '<span class="vicon">📹</span>Camera';
+  document.getElementById('vbtn-mic').classList.remove('active');
+  document.getElementById('vbtn-cam').classList.remove('active');
+  document.getElementById('video-local').style.display = 'block';
+  document.getElementById('cam-off-badge').classList.remove('show');
+  document.getElementById('video-waiting').style.display = 'flex';
+  showScreen('screen-landing');
+}
+
+function setVideoStatus(text, cls) {
+  const el = document.getElementById('video-status');
+  el.textContent = text;
+  el.className = 'video-status' + (cls ? ' ' + cls : '');
+}
+
+function addVideoMsg(text, type) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.style.maxWidth = '85%';
+  div.innerHTML = type === 'system'
+    ? text
+    : escHtml(text);
+  const box = document.getElementById('video-chat-box');
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearVideoChat() {
+  document.getElementById('video-chat-box').innerHTML = '';
+}
+
+function sendVideoMessage() {
+  const inp = document.getElementById('video-msg-input');
+  const text = inp.value.trim();
+  if (!text || state !== 'chatting') return;
+  socket.emit('message', { text });
+  addVideoMsg(text, 'me');
+  inp.value = '';
+  inp.style.height = '';
+}
+
+function handleVideoKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendVideoMessage(); }
+}
+
+// ── WebRTC Socket Events ──
+socket.on('webrtc-offer', async ({ from, offer }) => {
+  if (chatMode !== 'video') return;
+  await handleOffer(from, offer);
+});
+
+socket.on('webrtc-answer', async ({ answer }) => {
+  await handleAnswer(answer);
+});
+
+socket.on('webrtc-ice', async ({ candidate }) => {
+  await handleIce(candidate);
+});
+
+// Override matched for video mode
+const _origMatched = socket.listeners ? null : null;
+socket.on('matched', ({ partner, isInitiator }) => {
+  state = 'chatting';
+  if (chatMode === 'video') {
+    setVideoStatus('● ' + (partner.flag || '🌍') + ' ' + (partner.username || 'Stranger') + ' connected!', 'connected');
+    addVideoMsg('Connected with ' + (partner.flag || '🌍') + ' ' + (partner.username || 'Stranger') + ' from ' + (partner.country || 'Unknown') + '. Say hi!', 'system');
+    document.getElementById('video-msg-input').disabled = false;
+    document.getElementById('video-btn-send').disabled = false;
+    playSound();
+    // Only the initiator makes the WebRTC offer to avoid both sides calling
+    if (isInitiator) makeOffer(partner.socketId);
+  } else {
+    setStatus('● Connected!', 'connected');
+    showPartnerBar(partner);
+    addMsg(`You're now chatting with ${partner.flag} ${partner.username} from ${partner.country}. Say hi!`, 'system');
+    enableInput(true);
+    document.getElementById('btn-report').disabled = false;
+    playSound();
+  }
+});
+
+socket.on('strangerLeft', () => {
+  state = 'idle';
+  if (chatMode === 'video') {
+    handleVideoDisconnect();
+  } else {
+    hideTyping();
+    enableInput(false);
+    document.getElementById('btn-report').disabled = true;
+    setStatus('Stranger disconnected. Click Next for a new chat.', '');
+    addMsg('Stranger has disconnected.', 'system');
+    hidePartnerBar();
+  }
+});
+
+socket.on('message', async ({ text }) => {
+  if (chatMode === 'video') {
+    addVideoMsg(text, 'them');
+    return;
+  }
+  hideTyping();
+  if (selectedLang) {
+    const tempId = 'msg-' + Date.now();
+    addMsg(text, 'them', null, tempId);
+    setTranslateStatus('⏳');
+    try {
+      const res = await fetch('/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang: selectedLang })
+      });
+      const data = await res.json();
+      const translated = data.translatedText || text;
+      setTranslateStatus('✓ On');
+      if (translated && translated.toLowerCase() !== text.toLowerCase()) {
+        updateMsgTranslation(tempId, translated);
+      }
+    } catch {
+      setTranslateStatus('✓ On');
+    }
+  } else {
+    addMsg(text, 'them');
+  }
+});
+
 </script>
 </body>
 </html>

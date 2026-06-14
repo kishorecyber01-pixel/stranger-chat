@@ -140,8 +140,8 @@ function tryMatch(interests) {
       pairs.set(b, a);
       const infoA = userInfo.get(a) || {};
       const infoB = userInfo.get(b) || {};
-      io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown' } });
-      io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown' } });
+      io.to(a).emit('matched', { partner: { username: infoB.username || 'Stranger', flag: infoB.flag || '🌍', country: infoB.country || 'Unknown', socketId: b }, isInitiator: true });
+      io.to(b).emit('matched', { partner: { username: infoA.username || 'Stranger', flag: infoA.flag || '🌍', country: infoA.country || 'Unknown', socketId: a }, isInitiator: false });
       broadcastStats();
       return;
     }
@@ -247,6 +247,22 @@ io.on('connection', (socket) => {
     removeFromQueues(socket.id);
     socket.emit('idle');
     broadcastStats();
+  });
+
+  // ── WebRTC SIGNALING ──
+  socket.on('webrtc-offer', ({ to, offer }) => {
+    const partnerId = pairs.get(socket.id);
+    if (partnerId) io.to(partnerId).emit('webrtc-offer', { from: socket.id, offer });
+  });
+
+  socket.on('webrtc-answer', ({ to, answer }) => {
+    const partnerId = pairs.get(socket.id);
+    if (partnerId) io.to(partnerId).emit('webrtc-answer', { answer });
+  });
+
+  socket.on('webrtc-ice', ({ to, candidate }) => {
+    const partnerId = pairs.get(socket.id);
+    if (partnerId) io.to(partnerId).emit('webrtc-ice', { candidate });
   });
 
   socket.on('disconnect', () => {
