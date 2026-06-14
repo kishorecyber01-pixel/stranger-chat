@@ -676,17 +676,14 @@
       <p>Pick a name, choose your vibe, and start talking to real people around the world.</p>
     </div>
 
-    <div class="setup-card">
-      <div class="setup-row">
-        <div>
-          <span class="field-label">Nickname</span>
-          <input class="inp" id="inp-username" placeholder="e.g. CoolDude99" maxlength="20"/>
-        </div>
-        <div>
-          <span class="field-label">Country</span>
-          <select class="inp" id="inp-country"></select>
-        </div>
-      </div>
+    <div class="setup-row">
+  <div>
+    <span class="field-label">Nickname</span>
+    <input class="inp" id="inp-username"
+      placeholder="e.g. CoolDude99"
+      maxlength="20"/>
+  </div>
+</div>
 
       <div>
         <span class="field-label">Interests — match with similar people</span>
@@ -808,16 +805,25 @@ let typingTimeout = null;
 let isTypingSent = false;
 let selectedInterests = [];
 let isDark = true;
+let userCountry = "Unknown";
+let userFlag = "🌍";
 
 (function init() {
-  const sel = document.getElementById('inp-country');
-  COUNTRIES.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = `${c.flag} ${c.name}`;
-    sel.appendChild(opt);
-  });
-  sel.value = 'India';
+  fetch("https://ipapi.co/json/")
+  .then(res => res.json())
+  .then(data => {
+    userCountry = data.country_name;
+
+    const found = COUNTRIES.find(
+      c => c.name === data.country_name
+    );
+
+    if (found) {
+      userFlag = found.flag;
+    }
+  })
+  .catch(() => {});
+  
 
   const container = document.getElementById('interest-tags');
   INTERESTS.forEach(i => {
@@ -916,9 +922,10 @@ async function startChat() {
   }
 
   const username = document.getElementById('inp-username').value.trim() || 'Anonymous';
-  const countryName = document.getElementById('inp-country').value;
-  const country = COUNTRIES.find(c => c.name === countryName) || { name: 'Unknown', flag: '🌍' };
-
+  const country = {
+  name: userCountry,
+  flag: userFlag
+};
   socket.emit('setInfo', {
     username,
     country: country.name,
