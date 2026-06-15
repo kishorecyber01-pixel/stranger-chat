@@ -960,6 +960,26 @@
       .btn { font-size: .78rem; padding: 0 12px; }
       .controls { gap: 5px; }
     }
+
+    /* ── SITE FOOTER ── */
+    .site-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 4px 0 8px;
+      font-size: .7rem;
+      color: var(--muted);
+      width: 100%;
+    }
+    .site-footer a {
+      color: var(--muted2);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .site-footer a:hover { color: var(--accent3); }
+
   </style>
 </head>
 <body>
@@ -1058,7 +1078,17 @@
       • Be respectful — treat others how you'd like to be treated<br>
       • No hate speech, harassment, or explicit content<br>
       • Never share personal information<br>
-      • This platform is for adults only (18+)
+      • This platform is for adults only (18+)<br><br>
+      <a href="/community-guidelines.html" target="_blank" style="color:var(--accent3);text-decoration:none;font-size:.75rem;">📋 Full Community Guidelines</a>
+    </div>
+
+    <!-- Site footer links -->
+    <div class="site-footer">
+      <a href="/community-guidelines.html" target="_blank">📋 Community Guidelines</a>
+      <span>·</span>
+      <a href="/privacy-policy.html" target="_blank">🔒 Privacy Policy</a>
+      <span>·</span>
+      <span>© 2025 StrangerChat</span>
     </div>
 
   </div><!-- end #landing -->
